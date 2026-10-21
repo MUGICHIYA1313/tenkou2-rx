@@ -36,6 +36,7 @@ body{font-family:var(--f-jp);touch-action:none;-webkit-user-select:none;user-sel
   padding:calc(env(safe-area-inset-top,0px) + 14px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) max(16px,env(safe-area-inset-left,0px));
   font-family:var(--f-hud);font-size:22px;line-height:1;letter-spacing:.04em;
   text-shadow:1px 0 rgba(255,0,70,.55),-1px 0 rgba(0,210,255,.55),0 0 6px rgba(0,0,0,.9)}
+.row>div:first-child{white-space:nowrap}
 .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .rec{color:var(--ink);pointer-events:auto;cursor:pointer;padding:4px 6px;margin:-4px -6px}
 .rec b{color:var(--rec);font-weight:400}
@@ -84,6 +85,19 @@ h1{font-family:var(--f-jp);font-weight:400;font-size:clamp(2rem,10vw,3rem);line-
 .stat{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:15px;align-items:baseline}
 .stat b{font-family:var(--f-hud);font-weight:400;font-size:30px;text-align:right;font-variant-numeric:tabular-nums}
 .newbest{color:var(--amber);font-size:15px}
+.timer{font-size:30px;font-variant-numeric:tabular-nums;color:var(--ink);margin-top:-4px}
+.timer.low{color:var(--rec)}
+.best.rec{color:var(--amber)}
+.diff{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.diff .lab{color:var(--dim);margin-right:4px}
+.diff button{font-family:var(--f-jp);font-size:15px;padding:8px 14px;border:2px solid var(--dim);background:transparent;color:var(--ink);cursor:pointer}
+.diff button[aria-pressed="true"]{border-color:var(--amber);color:var(--amber);background:rgba(255,194,74,.12)}
+.diff button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.rank{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-family:var(--f-hud);font-size:22px}
+.rank li{display:grid;grid-template-columns:2.4em 1fr;gap:8px;color:var(--dim);font-variant-numeric:tabular-nums}
+.rank li b{font-weight:400;text-align:right}
+.rank li.me{color:var(--amber)}
+.ranklab{font-size:13px;color:var(--dim)}
 .rotate{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);font-size:18px;text-align:center;padding:24px;pointer-events:auto}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
@@ -97,7 +111,8 @@ h1{font-family:var(--f-jp);font-weight:400;font-size:clamp(2rem,10vw,3rem);line-
 <div class="hud" id="hud" hidden>
   <div>
     <div class="row">
-      <div><span class="rec" id="rec"><b>●</b> REC</span><button class="snd" id="snd" type="button">SOUND ON</button></div>
+      <div><span class="rec" id="rec"><b>●</b> REC</span><button class="snd" id="snd" type="button">SND ON</button></div>
+      <div class="timer" id="timer">1:30</div>
       <div class="batt"><span>LINK</span><div class="cells" id="cells"><i></i><i></i><i></i><i></i><i></i></div></div>
     </div>
     <div class="info" id="info"></div>
@@ -124,8 +139,13 @@ h1{font-family:var(--f-jp);font-weight:400;font-size:clamp(2rem,10vw,3rem);line-
     <ol class="how">
       <li><span>01</span><span>点線が予報の軌道。衛星が昇ってくる方角（AOS）にスマホを向けて待つ。</span></li>
       <li><span>02</span><span>衛星が来たら、まんなかの照準に入れ続ける。外れるとノイズが増えてLINKが減る。</span></li>
-      <li><span>03</span><span>予報は少しずれることがある。電波の強さとノイズを頼りに本物を探そう。LINKが0になったら終了。</span></li>
+      <li><span>03</span><span>予報は少しずれることがある。電波の強さとノイズを頼りに本物を探そう。制限時間は90秒。LINKが0になってもおしまい。</span></li>
     </ol>
+    <div class="diff" role="group" aria-label="むずかしさ">
+      <span class="lab">むずかしさ</span>
+      <button type="button" id="dEasy" data-d="easy" aria-pressed="false">かんたん</button>
+      <button type="button" id="dNormal" data-d="normal" aria-pressed="true">ふつう</button>
+    </div>
     <div class="bestline" id="bestTitle">TODAY BEST 0 KB</div>
     <div class="btns">
       <button class="btn" id="startCam" type="button">カメラで遊ぶ</button>
@@ -137,14 +157,16 @@ h1{font-family:var(--f-jp);font-weight:400;font-size:clamp(2rem,10vw,3rem);line-
 
 <section class="panel over" id="over" hidden>
   <div class="card">
-    <div class="eyebrow">SIGNAL LOST</div>
-    <h1>NO SIGNAL</h1>
+    <div class="eyebrow" id="oEye">SIGNAL LOST</div>
+    <h1 id="oHead">NO SIGNAL</h1>
     <div class="stat">
       <span>受信データ</span><b id="oScore">0 KB</b>
       <span>追いかけたパス</span><b id="oPass">0</b>
-      <span>本日の最高</span><b id="oBest">0 KB</b>
+      <span>本日の順位</span><b id="oRankNo">-</b>
     </div>
     <div class="newbest" id="oNew" hidden>本日の最高スコアを更新！</div>
+    <div class="ranklab" id="oRankLab">本日のトップ5</div>
+    <ol class="rank" id="oRank"></ol>
     <div class="btns">
       <button class="btn" id="again" type="button">もう一回</button>
       <button class="btn sub" id="toTitle" type="button">タイトルへ</button>
@@ -260,17 +282,32 @@ function beep(f,dur=.05,vol=.05,type='square'){
     o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dur+.02);}catch(_){}
 }
 function setNoiseVol(v){if(AC&&noiseGain){try{noiseGain.gain.setTargetAtTime(soundOn?v*.13:0,AC.currentTime,.05)}catch(_){}}}
-$('#snd').addEventListener('click',()=>{soundOn=!soundOn;$('#snd').textContent=soundOn?'SOUND ON':'SOUND OFF';if(!soundOn)setNoiseVol(0);});
+$('#snd').addEventListener('click',()=>{soundOn=!soundOn;$('#snd').textContent=soundOn?'SND ON':'SND OFF';if(!soundOn)setNoiseVol(0);});
 
-/* ---------- best score (per device, per day) ---------- */
-const todayKey=()=>{const d=new Date();return 'tk2-best-'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
-function getBest(){try{return +(localStorage.getItem(todayKey())||0)}catch(_){return 0}}
-function setBest(v){try{localStorage.setItem(todayKey(),String(Math.floor(v)))}catch(_){}}
-let bestToday=getBest();
+/* ---------- difficulty ---------- */
+const DIFF={
+  easy:  {label:'かんたん',beam:1.6,beamMin:5.5,err:.4,errT:.4,drain:.55,durStep:1.4,durMin:22},
+  normal:{label:'ふつう',  beam:1,  beamMin:3.2,err:1, errT:1, drain:1,  durStep:2.2,durMin:14}
+};
+const TIME_LIMIT=90;
+let diff='normal';
+try{const d=localStorage.getItem('tk2-diff');if(d&&DIFF[d])diff=d;}catch(_){}
+
+/* ---------- today's ranking (per device, per day, per difficulty) ---------- */
+const rankKey=()=>{const d=new Date();return 'tk2-rank-'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'-'+diff;};
+function getRank(){try{const a=JSON.parse(localStorage.getItem(rankKey())||'[]');return Array.isArray(a)?a.filter(x=>typeof x==='number'):[]}catch(_){return []}}
+function addRank(sc){const a=getRank();a.push(sc);a.sort((x,y)=>y-x);const top=a.slice(0,5);
+  try{localStorage.setItem(rankKey(),JSON.stringify(top))}catch(_){}
+  return {top,place:a.indexOf(sc)+1};}
+let bestToday=getRank()[0]||0;
+function setDiff(d){diff=d;try{localStorage.setItem('tk2-diff',d)}catch(_){}
+  $('#dEasy').setAttribute('aria-pressed',String(d==='easy'));$('#dNormal').setAttribute('aria-pressed',String(d==='normal'));
+  bestToday=getRank()[0]||0;$('#bestTitle').textContent=`TODAY BEST ${bestToday.toLocaleString()} KB（${DIFF[d].label}）`;}
 
 /* ---------- game state ---------- */
 const G={phase:'title',mode:'drag',n:0,link:100,score:0,comboT:0,lostT:0,mult:1,t:0,pass:null,between:0,
-  noise:.25,sig:0,locked:false,polOK:false,pkt:0,debug:false,sat:null,satUp:false,ang:180,lastResult:''};
+  noise:.25,sig:0,locked:false,polOK:false,pkt:0,debug:false,sat:null,satUp:false,ang:180,lastResult:'',
+  timeLeft:TIME_LIMIT,record:false,lastSec:99};
 
 function riseU(E){const c=Math.sin(2*D)/Math.sin(Math.max(E,3)*D);return (90-Math.acos(clamp(c,-1,1))/D)/180;}
 function pathAt(p,u){
@@ -284,17 +321,18 @@ function newPass(n){
   const B=basis(),facing=toAzEl(B.f)[0];
   const dir=Math.random()<.5?1:-1;
   const rise=facing+rand(-100,100);
-  const E=rand(20,82);
-  const dur=clamp(34-n*2.2,14,34);
-  const err=Math.min(1.2+n*1.1,11),errT=Math.min(.3+n*.35,3);
+  const E=rand(20,82),dd=DIFF[diff];
+  const dur=clamp(34-n*dd.durStep,dd.durMin,34);
+  const err=Math.min(1.2+n*1.1,11)*dd.err,errT=Math.min(.3+n*.35,3)*dd.errT;
   const pred={Ac:rise+90*dir,E,dir};
   const act={Ac:pred.Ac+randn()*err*.8,E:clamp(E+randn()*err*.6,12,88),dir};
   const wait=n===0?9:7;
-  return {pred,act,dur,tAOSp:wait,tAOSa:wait+randn()*errT,beam:Math.max(3.2,7.5-n*.45),
+  return {pred,act,dur,tAOSp:wait,tAOSa:wait+randn()*errT,beam:Math.max(dd.beamMin,7.5*dd.beam-n*.45),
     pol:rand(0,180),polSpin:rand(-10,10),got:0,possible:0,n};
 }
 function resetGame(){
   G.n=0;G.link=100;G.score=0;G.comboT=0;G.lostT=0;G.mult=1;G.t=0;G.between=0;G.pkt=0;G.locked=false;
+  G.timeLeft=TIME_LIMIT;G.record=false;G.lastSec=99;bestToday=getRank()[0]||0;$('#bestHud').classList.remove('rec');
   G.pass=newPass(0);G.phase='play';
 }
 
@@ -304,6 +342,14 @@ function update(dt){
   if(G.phase==='title'){drag.yaw+=4*dt;G.noise=.18;return;}
   if(G.phase==='over'){G.noise=1;return;}
   const B=basis();
+  // session timer
+  G.timeLeft-=dt;
+  const sec=Math.ceil(G.timeLeft);
+  if(sec<=10&&sec>0&&sec!==G.lastSec){G.lastSec=sec;beep(sec<=3?1200:900,.06,.05,'triangle');}
+  if(G.timeLeft<=0){endGame('time');return;}
+  // live new record
+  if(!G.record&&bestToday>0&&G.score>bestToday){G.record=true;$('#bestHud').classList.add('rec');
+    toast('NEW RECORD!　本日の最高を更新中',2400);[784,988,1175,1568].forEach((f,i)=>setTimeout(()=>beep(f,.09,.05),i*90));}
   if(G.phase==='between'){
     G.between-=dt;G.noise+=(.2-G.noise)*.1;
     if(G.between<=0){G.n++;G.pass=newPass(G.n);G.t=0;G.phase='play';}
@@ -329,12 +375,12 @@ function update(dt){
   if(up){P.possible+=dt;if(locked)P.got+=dt;
     const gain=10*(1+P.n*.25)*s*G.mult*polMul*dt;G.score+=gain;
     G.pkt+=s*dt*5;if(G.pkt>=1){G.pkt=0;beep(880+G.mult*120+(G.polOK?440:0),.03,.035);}
-    if(locked)G.link+=2.5*dt;else G.link-=(3.6+P.n*.6)*(1-s)*dt;
+    if(locked)G.link+=2.5*dt;else G.link-=(3.6+P.n*.6)*DIFF[diff].drain*(1-s)*dt;
   }
   G.link=Math.min(100,G.link);
   const target=up?.08+.5*(1-s):(G.t<P.tAOSa?.16:.24);
   G.noise+=(target-G.noise)*Math.min(1,dt*8);
-  if(G.link<=0){gameOver();return;}
+  if(G.link<=0){endGame('link');return;}
   const end=Math.max(P.tAOSa,P.tAOSp)+P.dur+.4;
   if(G.t>end){
     const ratio=P.possible?P.got/P.possible:0,refill=Math.round(8+30*ratio);
@@ -344,15 +390,27 @@ function update(dt){
   }
 }
 
-function gameOver(){
-  G.phase='over';G.link=0;setNoiseVol(1);beep(120,.6,.07,'sawtooth');
-  const sc=Math.floor(G.score),isNew=sc>bestToday&&sc>0;
-  if(isNew){bestToday=sc;setBest(sc);}
+function endGame(reason){
+  G.phase='over';G.endReason=reason;
+  if(reason==='link'){G.link=0;beep(120,.6,.07,'sawtooth');}
+  else{[1047,1319,1568,2093].forEach((f,i)=>setTimeout(()=>beep(f,.12,.05),i*120));}
+  const sc=Math.floor(G.score),prevBest=bestToday;
+  let place=0,top=getRank();
+  if(sc>0){const r=addRank(sc);place=r.place;top=r.top;}
+  const isNew=sc>0&&sc>prevBest;bestToday=top[0]||0;
+  $('#oEye').textContent=reason==='time'?'TIME UP':'SIGNAL LOST';
+  $('#oHead').textContent=reason==='time'?'TIME UP':'NO SIGNAL';
   $('#oScore').textContent=sc.toLocaleString()+' KB';
   $('#oPass').textContent=String(G.n+1);
-  $('#oBest').textContent=bestToday.toLocaleString()+' KB';
+  $('#oRankNo').textContent=place&&place<=5?`${place}位`:(place?'圏外':'-');
   $('#oNew').hidden=!isNew;
-  setTimeout(()=>{if(G.phase==='over'){$('#over').hidden=false;$('#hud').hidden=true;}},900);
+  $('#oRankLab').textContent=`本日のトップ5（${DIFF[diff].label}）`;
+  const ol=$('#oRank');ol.textContent='';let marked=false;
+  top.forEach((v,i)=>{const li=document.createElement('li');if(!marked&&v===sc&&i+1===place){li.className='me';marked=true;}
+    const a=document.createElement('span');a.textContent=`${i+1}.`;const b=document.createElement('b');b.textContent=v.toLocaleString()+' KB';
+    li.append(a,b);ol.append(li);});
+  if(!top.length){const li=document.createElement('li');li.textContent='まだ記録がありません';ol.append(li);}
+  setTimeout(()=>{if(G.phase==='over'){$('#over').hidden=false;$('#hud').hidden=true;}},reason==='time'?600:900);
 }
 
 /* ---------- drawing ---------- */
@@ -496,7 +554,10 @@ function hud(dt){
   cells.classList.toggle('low',G.link<25);cells.classList.toggle('blink',G.link<25&&!blink);
   $('#score').innerHTML=String(Math.floor(G.score)).padStart(6,'0')+'<small>KB</small>';
   const m=$('#mult');m.textContent='x'+(G.mult*(G.polOK?2:1)).toFixed(1);m.classList.toggle('pol',G.polOK);
-  $('#bestHud').textContent='本日の最高 '+Math.max(bestToday,0).toLocaleString()+' KB';
+  $('#bestHud').textContent=G.record?'NEW RECORD!':'本日の最高 '+Math.max(bestToday,0).toLocaleString()+' KB';
+  const tl=Math.max(0,Math.ceil(G.timeLeft)),tm=$('#timer');
+  tm.textContent=`${Math.floor(tl/60)}:${String(tl%60).padStart(2,'0')}`;
+  tm.classList.toggle('low',tl<=10);
   const P=G.pass,info=$('#info');
   if(G.phase==='play'&&P){
     const no='#'+String(P.n+1).padStart(2,'0');
@@ -559,7 +620,9 @@ $('#startCam').addEventListener('click',()=>start(true));
 $('#startDrag').addEventListener('click',()=>start(false));
 $('#again').addEventListener('click',()=>{if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});$('#over').hidden=true;$('#hud').hidden=false;if(G.mode==='drag'){drag.pitch=15;drag.roll=0;}resetGame();});
 $('#toTitle').addEventListener('click',()=>{$('#over').hidden=true;$('#hud').hidden=true;$('#title').hidden=false;G.phase='title';G.pass=null;G.mode='drag';
-  $('#bestTitle').textContent='TODAY BEST '+bestToday.toLocaleString()+' KB';checkPortrait();});
+  setDiff(diff);checkPortrait();});
+$('#dEasy').addEventListener('click',()=>setDiff('easy'));
+$('#dNormal').addEventListener('click',()=>setDiff('normal'));
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&wakeLock){try{wakeLock=await navigator.wakeLock.request('screen')}catch(_){}}});
 
 /* ---------- loop ---------- */
@@ -571,7 +634,7 @@ function frame(now){
   setNoiseVol(G.phase==='title'?0:G.noise);
   requestAnimationFrame(frame);
 }
-$('#bestTitle').textContent='TODAY BEST '+bestToday.toLocaleString()+' KB';
+setDiff(diff);
 resize();requestAnimationFrame(frame);
 })();
 </script>
