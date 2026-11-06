@@ -8,6 +8,7 @@
 <title>てんこう2 パケットキャッチ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Train+One&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
 <style>
 :root{
   --bg:#05070c; --panel:rgba(8,12,20,.72); --line:rgba(150,180,220,.22);
@@ -25,6 +26,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--d
 #score{font-family:var(--num);font-size:30px;display:inline-block}
 #score.bump{animation:bump .3s}
 @keyframes bump{40%{transform:scale(1.25);color:var(--pkt)}}
+#sub{font-size:11px;color:var(--dim);margin-top:6px;font-family:system-ui,sans-serif;text-align:center}
+#bits{font-family:var(--num);font-size:11px;margin-top:3px;letter-spacing:1px;white-space:nowrap;overflow:hidden;width:120px}
+#live{font-size:12px;line-height:1.7;max-width:330px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:system-ui,sans-serif;color:var(--text)}
+#live b{color:var(--accent);font-weight:600}
+#report{display:flex;flex-direction:column;gap:5px;width:300px;font-size:12px}
+#report .row{display:flex;align-items:center;gap:8px}
+#report .nm{width:96px;text-align:left}
+#report .bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+#report .bar i{display:block;height:100%}
+#report .ct{width:44px;text-align:right;font-family:var(--num)}
 #timebar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
 #timefill{height:100%;width:100%;background:var(--accent);transform-origin:left;transition:background .3s}
 #pic{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 14px);padding:8px 8px 6px;text-align:center;display:none;pointer-events:none}
@@ -45,9 +56,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--d
 button{font-family:var(--dot);font-size:17px;color:var(--text);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:15px;width:260px;cursor:pointer}
 button.primary{background:var(--accent);color:#1a1000;border-color:var(--accent)}
 button:active{transform:scale(.97)}
-#result{display:none;background:rgba(5,7,12,.92);gap:10px}
+#result{display:none;background:rgba(5,7,12,.92);gap:10px;overflow-y:auto;justify-content:flex-start;padding-top:calc(env(safe-area-inset-top) + 20px);padding-bottom:30px}
 #rTitle{font-family:var(--title);font-size:34px;color:var(--accent)}
-#rImg{width:180px;height:180px;border-radius:10px;border:1px solid var(--line);image-rendering:pixelated}
+#rImg{width:150px;height:150px;border-radius:10px;border:1px solid var(--line);image-rendering:pixelated}
 #rPieces{font-size:14px;color:var(--pkt)}
 #rScore{font-family:var(--num);font-size:56px;line-height:1}
 #rSub{font-size:12px;color:var(--dim);font-family:system-ui,sans-serif}
@@ -63,26 +74,29 @@ button:active{transform:scale(.97)}
 <div id="top" class="panel">
   <div class="r"><span id="hearts">♥♥♥</span><span id="score">0</span></div>
   <div id="timebar"><div id="timefill"></div></div>
+  <div id="sub"></div>
 </div>
-<div id="pic" class="panel"><canvas id="picCanvas" width="96" height="96"></canvas><div id="picLabel">0 / 36 ピース</div></div>
+<div id="pic" class="panel"><canvas id="picCanvas" width="96" height="96"></canvas><div id="picLabel">0 / 25 ピース</div><div id="bits"></div></div>
 <div id="banner"></div>
 
 <div id="start" class="screen">
   <h1><span>てんこう2</span><br>パケットキャッチ</h1>
   <div class="steps">
-    <div><i>📡</i><span>てんこう2から飛んでくる<br><b style="color:var(--pkt)">光るパケット</b>に照準を向けてキャッチ</span></div>
+    <div><i>🛰</i><span><b style="color:var(--accent)">本物のてんこう2の軌道</b>で、<br>相模原の空を通るパスを再現！</span></div>
+    <div><i>📡</i><span>飛んでくる<b style="color:var(--pkt)">パケット</b>に照準を向けて<br>4つのミッションのデータを受信</span></div>
     <div><i>☄️</i><span><b style="color:var(--warn)">デブリ</b>に照準を当てると<br>ライフが減るよ</span></div>
-    <div><i>🎨</i><span>パケットを集めて<br>90秒で日芸の絵を完成させよう</span></div>
   </div>
+  <div id="live">本物のてんこう2を計算中…</div>
   <button class="primary" id="bStartAR">スマホでスタート</button>
   <button id="bStartPC">PCであそぶ</button>
   <p class="note">スマホを持って、体ごと振り向いて遊ぶゲームです</p>
 </div>
 
 <div id="result" class="screen">
-  <div id="rTitle">完成！</div>
+  <div id="rTitle">完成！</div><div style="font-size:12px;color:var(--dim);margin-top:-6px">てんこう2 ミッションレポート</div>
   <canvas id="rImg" width="96" height="96"></canvas>
   <div id="rPieces"></div>
+  <div id="report"></div>
   <div id="rScore">0</div>
   <div id="rSub"></div>
   <div id="rLearn"></div>
@@ -94,10 +108,24 @@ button:active{transform:scale(.97)}
 "use strict";
 // ================== 調整用の数値 ==================
 const GAME_SEC = 90;        // 1プレイの長さ
-const GRID = 6;             // 絵のピース 6×6=36
+const GRID = 5;             // 日芸の絵のピース 5×5=25
 const CATCH_R = 5.5;          // キャッチ判定（度）
 const ROCK_R = 4.5;         // デブリ当たり判定（度）
 const SAT_SWING = 25;       // 衛星が左右に動く幅（度）
+
+// ================== 本物のてんこう2 ==================
+// CelesTrak から取得した軌道データ（NORAD 68261）。ページを開いた時に最新版の取得も試みる
+let TLE=["TEN-KOH 2",
+ "1 68261U 25241B   26309.33270499  .00004682  00000+0  19562-3 0  9999",
+ "2 68261  51.6595   7.0436 0005815 274.4137  85.6177 15.25479161 36445"];
+let TLE_NOTE="2026年11月5日の軌道データ";
+const OBS={lat:35.5582, lon:139.3956, h:0.15};   // JAXA相模原キャンパス
+const TYPES=[
+ {k:"art",   icon:"🎨", rgb:"79,232,255",  name:"日芸の作品",   bits:"00", f:523, w:.5},
+ {k:"photo", icon:"📷", rgb:"255,216,79",  name:"地球の写真",   bits:"01", f:659, w:.2},
+ {k:"rad",   icon:"☢️", rgb:"197,140,255", name:"放射線データ", bits:"10", f:784, w:.15},
+ {k:"radio", icon:"📻", rgb:"125,255,138", name:"無線家の声",   bits:"11", f:988, w:.15}];
+const COUNTRIES=["🇺🇸 アメリカ","🇬🇧 イギリス","🇧🇷 ブラジル","🇦🇺 オーストラリア","🇹🇼 台湾","🇩🇪 ドイツ","🇮🇳 インド","🇿🇦 南アフリカ","🇨🇦 カナダ","🇫🇷 フランス","🇰🇷 韓国","🇦🇷 アルゼンチン"];
 
 // ================== 共通 ==================
 const DEG=Math.PI/180, $=id=>document.getElementById(id);
@@ -110,10 +138,53 @@ const ang=(a,b)=>Math.acos(Math.max(-1,Math.min(1,dot(a,b))))/DEG;
 const vecAz=v=>(Math.atan2(v[0],v[1])/DEG+360)%360;
 const vecEl=v=>Math.asin(Math.max(-1,Math.min(1,v[2])))/DEG;
 const rnd=(a,b)=>a+Math.random()*(b-a);
+const DIRS=["北","北北東","北東","東北東","東","東南東","南東","南南東","南","南南西","南西","西南西","西","西北西","北西","北北西"];
+const dirName=a=>DIRS[Math.round((((a%360)+360)%360)/22.5)%16];
+const wrap180=a=>((a+540)%360)-180;
+let REC=null;
+function loadRec(){ try{ if(typeof satellite!=="undefined") REC=satellite.twoline2satrec(TLE[1],TLE[2]); }catch(e){ REC=null; } }
+loadRec();
+function lookAt(t){
+  if(!REC) return null; const d=new Date(t), pv=satellite.propagate(REC,d); if(!pv||!pv.position) return null;
+  const g=satellite.gstime(d), gd={latitude:OBS.lat*DEG,longitude:OBS.lon*DEG,height:OBS.h};
+  const l=satellite.ecfToLookAngles(gd,satellite.eciToEcf(pv.position,g)), geo=satellite.eciToGeodetic(pv.position,g);
+  return {t, az:l.azimuth/DEG, el:l.elevation/DEG, rng:l.rangeSat, alt:geo.height};
+}
+function nextPass(from,minMax,maxMax){
+  // いま上空を通過中なら、そのパスは飛ばして次から探す
+  for(let k=0;k<120;k++){ const l=lookAt(from); if(!l) return null; if(l.el<=0) break; from+=10000; }
+  let inP=false, st=0, mx=null, rise=null;
+  for(let s=0;s<60*3600;s+=20){ const t=from+s*1000, l=lookAt(t); if(!l) return null;
+    if(l.el>0&&!inP){ inP=true; st=t; mx=l; rise=l; }
+    if(inP&&l.el>mx.el) mx=l;
+    if(l.el<=0&&inP){ inP=false; if(mx.el>=minMax && mx.el<=(maxMax||91)) return {aos:st, los:t, max:mx, rise, set:l}; } }
+  return null;
+}
+const fmtJST=t=>new Date(t).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",month:"numeric",day:"numeric",weekday:"short",hour:"2-digit",minute:"2-digit"});
+function passText(p){ return `<b>${fmtJST(p.aos)}</b>ごろ・最高 ${p.max.el.toFixed(0)}°${p.max.el>=80?"（ほぼ真上！）":""}・${dirName(p.rise.az)}から${dirName(p.set.az)}へ`; }
+let GP=null;   // ゲームで再現するパス
+function prepPass(){
+  if(!REC){ GP=null; return; }
+  const p=nextPass(Date.now(),25,70)||nextPass(Date.now(),12); if(!p){ GP=null; return; }
+  let gs=p.aos, ge=p.los; for(let t=p.aos;t<p.los;t+=2000){ if(lookAt(t).el>=8){ gs=t; break; } } for(let t=p.los;t>p.aos;t-=2000){ if(lookAt(t).el>=8){ ge=t; break; } }
+  GP={...p, gs, ge};
+}
+function updateLive(){
+  const el=$("live"); if(!el) return;
+  if(!REC){ el.innerHTML="軌道計算ライブラリを読み込めませんでした（架空の軌道で遊べます）"; return; }
+  const n=lookAt(Date.now()), np=nextPass(Date.now(),30);
+  el.innerHTML=`いまの<b>てんこう2</b>：高度 ${Math.round(n.alt)}km・相模原から ${Math.round(n.rng).toLocaleString()}km（${n.el>0?"相模原の空の上！":"地平線の下"}）`+
+    (np?`<br>相模原の空に次に高く昇るのは<br>${passText(np)}`:"")+`<br><span style="color:var(--dim);font-size:10px">${TLE_NOTE}</span>`;
+}
+(async()=>{ try{ const c=new AbortController(); setTimeout(()=>c.abort(),4000);
+  const r=await fetch("https://celestrak.org/NORAD/elements/gp.php?CATNR=68261&FORMAT=TLE",{signal:c.signal}); const t=(await r.text()).trim().split(/\r?\n/).map(s=>s.trim());
+  if(t.length>=3 && t[1].startsWith("1 68261") && t[2].startsWith("2 68261")){ TLE=t; TLE_NOTE="最新の軌道データ（CelesTrak）"; loadRec(); }
+ }catch(e){} updateLive(); })();
+setInterval(()=>{ if($("start").style.display!=="none") updateLive(); },2000);
 function toast(t,ms){ const m=$("msg"); m.innerHTML=t; m.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(()=>m.style.display="none",ms||2500); }
 
 // ================== 向き ==================
-let mode=null, ori=null, view={az:0,el:15}, vfov=62;
+let mode=null, ori=null, compass=null, view={az:0,el:15}, vfov=62;
 function basisFromView(az,el){ const f=enu(az,el); let r=norm(cross(f,[0,0,1])); if(!isFinite(r[0])) r=[1,0,0]; return {f,u:norm(cross(r,f)),r}; }
 function basisFromOri(o){
   const a=(o.alpha||0)*DEG,b=(o.beta||0)*DEG,g=(o.gamma||0)*DEG;
@@ -183,7 +254,7 @@ function tone(f,dur,type,vol,f2,delay){ if(!AC) return; const t=AC.currentTime+(
 function noise(dur,vol){ if(!AC) return; const b=AC.createBuffer(1,AC.sampleRate*dur,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
   const s=AC.createBufferSource(), g=AC.createGain(); s.buffer=b; g.gain.value=vol; s.connect(g).connect(AC.destination); s.start(); }
 const sfx={
-  catch:c=>{ const f=523*Math.pow(2,Math.min(c,24)/12); tone(f,.13,"triangle",.28); tone(f*2,.1,"sine",.1,null,.05); },
+  catch:(c,f)=>{ tone(f,.15,"triangle",.3); if(c>=5) tone(f*2,.09,"sine",.08+Math.min(c,20)*.004,null,.06); },
   spawn:()=>tone(1500,.05,"sine",.03),
   miss:()=>tone(240,.14,"sine",.07,180),
   hit:()=>{ noise(.35,.35); tone(160,.4,"sawtooth",.18,50); },
@@ -196,16 +267,27 @@ const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
 // ================== ゲーム ==================
 let G=null;
 function newGame(B){
-  G={state:"count", t:-3.2, life:3, score:0, combo:0, maxCombo:0, caught:0, tiles:new Array(GRID*GRID).fill(false), completeT:null,
+  G={state:"count", t:-5.2, azOff:null, cOff:null, got:{art:0,photo:0,rad:0,radio:0}, sent:{art:0,photo:0,rad:0,radio:0}, bits:[], life:3, score:0, combo:0, maxCombo:0, caught:0, tiles:new Array(GRID*GRID).fill(false), completeT:null,
      packets:[], rocks:[], parts:[], floats:[], spawnT:0.6, rockT:2.5, startAz:vecAz(B.f), shake:0, flash:0, inv:0, lastCount:4, pf:null, rushShown:false};
   $("top").style.display="block"; $("pic").style.display="block"; $("result").style.display="none";
+  prepPass();
+  if(GP){ if(mode==="pc"){ G.azOff=0; view={az:GP.rise.az+20, el:12}; }
+    banner(`本物のてんこう2<small>${fmtJST(GP.aos)} の相模原上空のパスを再現<br>${dirName(GP.rise.az)}の空から現れるぞ！</small>`,2300); }
 }
-function satDir(){ const u=Math.max(0,Math.min(1,G.t/GAME_SEC)); return enu(G.startAz-SAT_SWING+2*SAT_SWING*u, 16+30*Math.sin(Math.PI*u)); }
+function simT(){ const u=Math.max(0,Math.min(1,G.t/GAME_SEC)); return GP.gs+u*(GP.ge-GP.gs); }
+let satCache={k:-1,v:null,l:null};
+function satLook(){ if(!GP) return null; const t=simT(); if(satCache.k!==t){ satCache={k:t,l:lookAt(t)}; } return satCache.l; }
+function satDir(){
+  const l=satLook(); if(l && G.azOff!==null) return enu(l.az-G.azOff, l.el);
+  const u=Math.max(0,Math.min(1,G.t/GAME_SEC)); return enu(G.startAz-SAT_SWING+2*SAT_SWING*u, 16+30*Math.sin(Math.PI*u)); }
 function offsetDir(base,dist,a){ const az=vecAz(base), el=vecEl(base); return enu(az+dist*Math.cos(a)/Math.max(.35,Math.cos(el*DEG)), Math.max(6,Math.min(78,el+dist*Math.sin(a)))); }
 function heat(){ return Math.min(1, G.t/GAME_SEC*0.8 + G.combo*0.02); }   // だんだん忙しく
 function spawnPacket(){
   const s=satDir(); const to=offsetDir(s,rnd(10,36),Math.random()*Math.PI*2);
-  G.packets.push({from:s,to,age:0,fly:.55,life:Math.max(1.9,3.6-heat()*1.5)}); sfx.spawn();
+  let r=Math.random(), ty=TYPES[0]; for(const T of TYPES){ if((r-=T.w)<=0){ ty=T; break; } }
+  if(G.tiles.every(Boolean) && ty.k==="art" && Math.random()<.5) ty=TYPES[1+(Math.random()*3|0)];
+  G.sent[ty.k]++;
+  G.packets.push({ty,from:s,to,age:0,fly:.55,life:Math.max(1.9,3.6-heat()*1.5)}); sfx.spawn();
 }
 function spawnRock(B){
   // 照準のまわりに出現して、ゆっくり横切る
@@ -231,8 +313,11 @@ function update(dt,B){
 
   if(G.state==="count"){
     const n=Math.ceil(-G.t);
-    if(n!==G.lastCount){ G.lastCount=n; if(n>0){ banner(`<span style="font-size:110px;line-height:1">${n}</span>`,700); sfx.count(false); } }
-    if(G.t>=0){ G.state="play"; G.startAz=vecAz(B.f); banner("スタート！",800); sfx.count(true); }
+    if(n!==G.lastCount){ G.lastCount=n; if(n>0 && n<=3){ banner(`<span style="font-size:110px;line-height:1">${n}</span>`,700); sfx.count(false); } }
+    if(mode==="ar" && compass!=null && Math.abs(B.f[2])<.85){ const s=wrap180(compass-vecAz(B.f)); G.cOff = G.cOff==null ? s : G.cOff+wrap180(s-G.cOff)*.15; }
+    if(G.t>=0){ G.state="play"; G.startAz=vecAz(B.f);
+      if(GP && G.azOff===null){ G.azOff = G.cOff!=null ? G.cOff : wrap180(GP.max.az-vecAz(B.f)); }
+      banner("スタート！",800); sfx.count(true); }
     return;
   }
   if(G.state!=="play") return;
@@ -250,10 +335,14 @@ function update(dt,B){
     const f=Math.min(1,k.age/k.fly), e=1-Math.pow(1-f,3); k.pos=norm(add(k.from,[k.to[0]-k.from[0],k.to[1]-k.from[1],k.to[2]-k.from[2]],e));
     if(f>.35 && ang(k.pos,B.f)<CATCH_R){
       G.packets.splice(i,1); G.combo++; G.maxCombo=Math.max(G.maxCombo,G.combo); G.caught++;
+      const T=k.ty; G.got[T.k]++; G.bits.push(T); if(G.bits.length>10) G.bits.shift();
       const pts=(100+G.combo*20)*(G.completeT!==null?2:1); G.score+=pts;
-      const p=project(k.pos,B); burst(p.x,p.y,"79,232,255",16); floatText(p.x,p.y-14,"+"+pts,"#4fe8ff");
-      sfx.catch(G.combo); buzz(15); const sc=$("score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
-      if(revealTile()>=0 && G.tiles.every(Boolean)){ G.completeT=G.t; sfx.done(); buzz([60,40,60]); banner("絵が完成！<small>残り時間は得点2倍</small>",1800); }
+      const p=project(k.pos,B); burst(p.x,p.y,T.rgb,16); floatText(p.x,p.y-14,"+"+pts+"  "+T.bits,`rgb(${T.rgb})`);
+      if(T.k==="photo") floatText(p.x,p.y+16,"📷 地球の写真","#ffd84f");
+      if(T.k==="rad") floatText(p.x,p.y+16,"☢️ 放射線を観測","#c58cff");
+      if(T.k==="radio") floatText(p.x,p.y+16,COUNTRIES[Math.random()*COUNTRIES.length|0]+"から","#7dff8a");
+      sfx.catch(G.combo,T.f); buzz(15); const sc=$("score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
+      if(T.k==="art" && revealTile()>=0 && G.tiles.every(Boolean)){ G.completeT=G.t; sfx.done(); buzz([60,40,60]); banner("日芸の絵が完成！<small>残り時間は得点2倍</small>",1800); }
       continue;
     }
     if(k.age>k.fly+k.life){ G.packets.splice(i,1); if(G.combo>=3) floatText(W/2,H/2+64,"コンボ切れ","#8a97ab"); G.combo=0; sfx.miss(); }
@@ -274,6 +363,11 @@ function update(dt,B){
 }
 
 const LEARN=[
+ "<b>4つの音で送る</b><br>てんこう2の高速通信は4FSKという方式。4つの高さの音に00・01・10・11を割り当ててデータを送ります。ゲームのキャッチ音もこの4つの音です。",
+ "<b>地球の写真</b><br>てんこう2には台湾・成功大学が開発したカメラが積まれていて、宇宙から撮った画像を地上に送ります。",
+ "<b>放射線データ</b><br>てんこう2の荷電粒子検出器（Liulin）は、宇宙を飛び交う放射線を測っています。宇宙で働く人や機械を守るための大切なデータです。",
+ "<b>無線家の声</b><br>てんこう2のリニアトランスポンダは、世界中のアマチュア無線家の電波を中継します。宇宙を通して、地球の反対側の人とも話せます。",
+ "<b>てんこう2のふるさと</b><br>てんこう2は2025年10月に種子島から打ち上げられ、2026年3月に補給機HTV-Xから宇宙へ放出されました。",
  "<b>なぜ電波が弱い？</b><br>てんこう2の送信機はとても小さな電力。しかも数百〜2000km先から届くので、アンテナをきっちり向けないと受信できません。",
  "<b>パケットって？</b><br>大きなデータは小さなかたまり（パケット）に分けて送られます。受け取れなかった分は欠けてしまうので、絵が完成しないこともあります。",
  "<b>スペースデブリ</b><br>地球のまわりには、使い終わった衛星やロケットの破片が何万個も回っています。とても速いので、小さな破片でも衛星には大きな脅威です。",
@@ -289,10 +383,13 @@ function end(title){
   setTimeout(()=>{
     $("rTitle").textContent=title;
     drawPic($("rImg").getContext("2d"),G.tiles,null);
-    $("rPieces").textContent=`${pieces} / ${GRID*GRID} ピース受信`+(G.completeT!==null?`（${G.completeT.toFixed(1)}秒で完成）`:"");
+    $("rPieces").textContent=`🎨 日芸の絵 ${pieces} / ${GRID*GRID} ピース`+(G.completeT!==null?`（${G.completeT.toFixed(1)}秒で完成）`:"");
+    $("report").innerHTML=TYPES.map(T=>{ const s=G.sent[T.k]||0, g=G.got[T.k]||0, pc=s?Math.round(g/s*100):0;
+      return `<div class="row"><span class="nm">${T.icon} ${T.name}</span><span class="bar"><i style="width:${pc}%;background:rgb(${T.rgb})"></i></span><span class="ct">${pc}%</span></div>`; }).join("");
     $("rScore").textContent=G.score.toLocaleString();
     $("rSub").textContent=`最大コンボ ${G.maxCombo}　`+(nb?"★ 自己ベスト更新！":`ベスト ${best.toLocaleString()}`);
-    $("rLearn").innerHTML=LEARN[Math.random()*LEARN.length|0];
+    const np=REC?nextPass(Date.now(),30):null;
+    $("rLearn").innerHTML=LEARN[Math.random()*LEARN.length|0]+(np?`<br><br><b>本物のてんこう2</b><br>相模原の空に次に高く昇るのは ${passText(np).replace(/<\/?b>/g,"")}。外で見上げてみてね！`:"");
     $("result").style.display="flex"; $("top").style.display="none"; $("pic").style.display="none";
   },900);
 }
@@ -314,6 +411,7 @@ function draw(B,now){
   if(G && G.state!=="count"){
     // 衛星
     const s=satDir(), sp=project(s,B);
+    if(G.azOff!==null){ cx.fillStyle="rgba(255,177,59,.85)"; cx.textAlign="center"; for(let a=0;a<360;a+=45){ const q=project(enu(a-G.azOff,-3),B); if(q.front&&q.x>-20&&q.x<W+20){ cx.font=(a%90?"11px":"15px")+' "Dela Gothic One"'; cx.fillText(DIRS[a/22.5],q.x,q.y+12); } } }
     if(sp.front){ cx.save(); cx.translate(sp.x,sp.y); const pul=16+Math.sin(now/180)*3;
       cx.strokeStyle="rgba(255,177,59,.9)"; cx.lineWidth=2; cx.beginPath(); cx.arc(0,0,pul,0,Math.PI*2); cx.stroke();
       cx.fillStyle="#ffb13b"; cx.fillRect(-5,-4,10,8); cx.fillRect(-16,-2,9,4); cx.fillRect(7,-2,9,4);
@@ -331,15 +429,16 @@ function draw(B,now){
       cx.closePath(); cx.fill(); cx.stroke(); cx.restore(); }
     // パケット
     for(const k of G.packets){ if(!k.pos) continue; const p=project(k.pos,B); if(!p.front) continue;
-      const f=Math.min(1,k.age/k.fly), rem=Math.max(0,1-(k.age-k.fly)/k.life), size=(f<1?9:14)+3*Math.sin(now/120+k.from[0]*9);
-      if(f<1){ const q=project(k.from,B); if(q.front){ cx.strokeStyle="rgba(79,232,255,.35)"; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(q.x,q.y); cx.lineTo(p.x,p.y); cx.stroke(); } }
+      const T=k.ty, f=Math.min(1,k.age/k.fly), rem=Math.max(0,1-(k.age-k.fly)/k.life), size=(f<1?10:15)+2.5*Math.sin(now/120+k.from[0]*9);
+      if(f<1){ const q=project(k.from,B); if(q.front){ cx.strokeStyle=`rgba(${T.rgb},.35)`; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(q.x,q.y); cx.lineTo(p.x,p.y); cx.stroke(); } }
       cx.save(); cx.translate(p.x,p.y); cx.globalAlpha=f<1?1:(.35+.65*rem);
-      cx.fillStyle="rgba(79,232,255,.18)"; cx.beginPath(); cx.arc(0,0,size*1.6,0,Math.PI*2); cx.fill(); cx.shadowColor="#4fe8ff"; cx.shadowBlur=18; cx.rotate(now/400); cx.fillStyle="#4fe8ff"; cx.fillRect(-size/2,-size/2,size,size);
-      cx.shadowBlur=0; cx.fillStyle="#e9fdff"; cx.fillRect(-size/5,-size/5,size/2.5,size/2.5); cx.rotate(-now/400);
-      if(f>=1){ cx.strokeStyle=rem<.35?"#ff5a5a":"rgba(79,232,255,.9)"; cx.lineWidth=3; cx.beginPath(); cx.arc(0,0,size+9,-Math.PI/2,-Math.PI/2+Math.PI*2*rem); cx.stroke(); }
+      cx.fillStyle=`rgba(${T.rgb},.2)`; cx.beginPath(); cx.arc(0,0,size*1.7,0,Math.PI*2); cx.fill();
+      cx.shadowColor=`rgb(${T.rgb})`; cx.shadowBlur=16; cx.fillStyle=`rgba(${T.rgb},.9)`; cx.beginPath(); cx.arc(0,0,size,0,Math.PI*2); cx.fill(); cx.shadowBlur=0;
+      cx.font=`${Math.round(size*1.15)}px system-ui,"Apple Color Emoji",sans-serif`; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(T.icon,0,1); cx.textBaseline="alphabetic";
+      if(f>=1){ cx.strokeStyle=rem<.35?"#ff5a5a":`rgb(${T.rgb})`; cx.lineWidth=3; cx.beginPath(); cx.arc(0,0,size+8,-Math.PI/2,-Math.PI/2+Math.PI*2*rem); cx.stroke(); }
       cx.restore(); }
     // 画面外の案内
-    for(const k of G.packets){ if(k.pos && k.age>k.fly*.5) arrowTo(k.pos,B,"rgba(79,232,255,.9)"); }
+    for(const k of G.packets){ if(k.pos && k.age>k.fly*.5) arrowTo(k.pos,B,`rgb(${k.ty.rgb})`); }
     arrowTo(s,B,"#ffb13b","てんこう2");
   }
   // 照準
@@ -363,7 +462,10 @@ function updateHUD(){
   $("score").textContent=G.score.toLocaleString();
   const left=Math.max(0,Math.min(1,1-G.t/GAME_SEC)); $("timefill").style.transform=`scaleX(${G.state==="count"?1:left})`;
   $("timefill").style.background=left<.22?"var(--warn)":"var(--accent)";
-  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=n===GRID*GRID?"完成！ 得点2倍":`${n} / ${GRID*GRID} ピース`;
+  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=n===GRID*GRID?"🎨 完成！ 得点2倍":`🎨 日芸の絵 ${n} / ${GRID*GRID}`;
+  $("bits").innerHTML=G.bits.map(T=>`<span style="color:rgb(${T.rgb})">${T.bits}</span>`).join(" ")||"&nbsp;";
+  const l=G.state!=="count"?satLook():null;
+  $("sub").textContent = l ? `てんこう2：高度 ${Math.round(l.alt)}km・相模原から ${Math.round(l.rng).toLocaleString()}km・${dirName(l.az)}の空 ${Math.max(0,l.el).toFixed(0)}°` : (GP?"本物の軌道データで計算中":"");
   drawPic(pc,G.tiles,G.pf);
 }
 
@@ -389,7 +491,7 @@ async function startAR(){
     if(typeof DeviceOrientationEvent!=="undefined" && DeviceOrientationEvent.requestPermission){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") throw new Error("傾きセンサーが許可されませんでした");
     }
-    addEventListener("deviceorientation",e=>{ if(e.alpha!=null) ori={alpha:e.alpha,beta:e.beta,gamma:e.gamma}; });
+    addEventListener("deviceorientation",e=>{ if(e.alpha!=null) ori={alpha:e.alpha,beta:e.beta,gamma:e.gamma}; if(e.webkitCompassHeading!=null) compass=e.webkitCompassHeading; });
     const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
     const v=$("video"); v.srcObject=st; v.style.display="block"; await v.play().catch(()=>{});
     mode="ar";
@@ -399,7 +501,7 @@ async function startAR(){
   }catch(err){ toast("カメラ／センサーを使えませんでした<br>（"+err.message+"）<br>SafariでHTTPSのページを開いてください",4500); }
 }
 $("bStartAR").onclick=startAR;
-$("bStartPC").onclick=()=>{ mode="pc"; view={az:0,el:15}; begin(); toast("ドラッグ（または矢印キー）で見回そう",2500); };
+$("bStartPC").onclick=()=>{ mode="pc"; view={az:180,el:15}; begin(); toast("ドラッグ（または矢印キー）で見回そう",2500); };
 $("bAgain").onclick=()=>{ audio(); newGame(getBasis()); };
 </script>
 </body>
