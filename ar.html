@@ -55,6 +55,34 @@ button.on{border-color:var(--accent);color:var(--accent)}
 #settings input[type=range]{width:100%}
 #settings .btns{display:flex;gap:6px;margin-top:8px}
 #msg{position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--dot);font-size:14px;padding:10px 16px;border-radius:10px;background:rgba(0,0,0,.75);border:1px solid var(--line);display:none;z-index:20;text-align:center;max-width:80%}
+/* ===== シンプル表示（デフォルト） ===== */
+body:not(.detail) #hud, body:not(.detail) #bar, body:not(.detail) #rx, body:not(.detail) #act, body:not(.detail) #tune{display:none!important}
+#top{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:10px;right:10px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+body.detail #top{display:none}
+#top .r{display:flex;justify-content:space-between;align-items:center}
+#hearts{font-size:24px;color:#ff5a5a;letter-spacing:2px}
+#bigScore{font-family:var(--dot);font-size:28px}
+#bigScore small{font-size:11px;color:var(--dim);margin-right:6px}
+#coach{font-family:var(--dot);font-size:17px;text-align:center;padding-top:4px;min-height:24px}
+#bigBank{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 20px);width:min(300px,calc(100% - 136px));padding:18px 12px;font-size:20px;border-radius:16px;background:var(--accent);color:#1a1000;border:none;box-shadow:0 6px 24px rgba(255,177,59,.35)}
+#bigBank:disabled{background:rgba(8,12,20,.72);color:var(--dim);box-shadow:none;font-size:14px;border:1px solid var(--line)}
+#bigBank.danger{animation:pulse .3s infinite alternate;background:#ff5a5a;color:#fff}
+@keyframes pulse{to{transform:translateX(-50%) scale(1.07)}}
+body.detail #bigBank{display:none}
+#gear{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 28px);width:44px;height:44px;flex:none;padding:0;font-size:20px;border-radius:50%;background:rgba(8,12,20,.72)}
+body.detail #gear{bottom:calc(env(safe-area-inset-bottom) + 186px)}
+#result{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;background:rgba(5,7,12,.9);z-index:15}
+#result h2{font-family:var(--dot);font-weight:400;font-size:22px;color:var(--accent)}
+#rScore{font-family:var(--dot);font-size:56px;line-height:1}
+#rBest{font-size:13px;color:var(--dim)}
+#rImg{width:132px;height:132px;image-rendering:pixelated;border-radius:8px;border:1px solid var(--line)}
+#rLearn{font-size:12px;line-height:1.7;max-width:320px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left}
+#rLearn b{color:var(--lock);font-weight:400;font-family:var(--dot);font-size:14px}
+#result button{flex:none;width:260px;padding:16px;font-size:18px;background:var(--accent);color:#1a1000;border-color:var(--accent)}
+.steps{display:flex;flex-direction:column;gap:12px;text-align:left;max-width:330px}
+.steps div{display:flex;gap:12px;align-items:center;font-family:var(--dot);font-size:15px;line-height:1.45}
+.steps i{font-style:normal;flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
+#start .note{font-size:10px}
 </style>
 </head>
 <body>
@@ -102,11 +130,20 @@ button.on{border-color:var(--accent);color:var(--accent)}
 </div>
 
 <div id="start">
-  <h1><span>てんこう2</span><br>AR受信</h1>
-  <p>スマホを空にかざして、衛星を見つけて追いかけよう。<br>電波は弱いから、アンテナ（画面の中心）をぴったり合わせ続けるのがコツ。<br><br>受信を続けるほど倍率アップ。でも電波が途切れると<b style="color:#ffb13b">未保存の点は消える</b>。「保存」のタイミングが勝負！<br>飛んでくる<b style="color:#ff5a5a">デブリ（宇宙ゴミ）</b>は画面タップで撃ち落とせ。ぶつかるとライフが減るぞ。<br><br>※現在は架空の軌道データ（ISS相当）で動作中</p>
-  <button class="primary" id="bStartAR">カメラでスタート</button>
-  <button id="bStartPC">PCで試す（ドラッグで見回す）</button>
+  <h1><span>てんこう2</span><br>電波キャッチ</h1>
+  <div class="steps">
+    <div><i>📡</i><span>空を飛ぶ「てんこう2」を<br>まんなかの円に入れて電波を受信</span></div>
+    <div><i>☄️</i><span>飛んでくるデブリは<br>画面タップで撃ち落とせ</span></div>
+    <div><i>💾</i><span>たまった点は「保存」で確定。<br>電波が切れると消えちゃう！</span></div>
+  </div>
+  <p class="note">※架空の軌道データ（ISS相当）で動いています</p>
+  <button class="primary" id="bStartAR">スマホでスタート</button>
+  <button id="bStartPC">PCであそぶ</button>
 </div>
+<div id="top" class="panel"><div class="r"><span id="hearts">♥♥♥</span><span id="bigScore"><small>SCORE</small><span id="bsN">0</span></span></div><div id="coach">—</div></div>
+<button id="bigBank" disabled>受信して点をためよう</button>
+<button id="gear" title="詳細表示">⚙</button>
+<div id="result"><h2 id="rTitle">パス終了！</h2><div id="rScore">0</div><div id="rBest"></div><canvas id="rImg" width="96" height="96"></canvas><div id="rLearn"></div><button id="rAgain">もう一度あそぶ</button></div>
 <div id="msg"></div>
 
 <script>
@@ -293,7 +330,7 @@ function drawSky(B, look, t){
       // 6U衛星アイコン（本体＋パネル）
       cx.setLineDash([]); cx.fillRect(-5,-3.5,10,7); cx.fillRect(-15,-2,8,4); cx.fillRect(7,-2,8,4);
       cx.font='12px "DotGothic16"'; cx.textAlign="center";
-      cx.fillText(above?S.satName.split(" ")[0]:"地平線の下",0,-pulse-6);
+      cx.fillText(above?"てんこう2":"地平線の下",0,-pulse-6);
       cx.restore();
     } else {
       // 画面外の方向を矢印で
@@ -338,6 +375,8 @@ function drawSky(B, look, t){
   const bw=beamWidth(), rpx=Math.tan(bw*DEG)*(H/2)/Math.tan(S.vfov*DEG/2);
   cx.setLineDash([5,5]); cx.beginPath(); cx.arc(0,0,rpx,0,Math.PI*2); cx.stroke(); cx.setLineDash([]);
   for(const [a,b] of [[[0,-rpx-12],[0,-rpx+6]],[[0,rpx-6],[0,rpx+12]],[[-rpx-12,0],[-rpx+6,0]],[[rpx-6,0],[rpx+12,0]]]){cx.beginPath();cx.moveTo(...a);cx.lineTo(...b);cx.stroke();}
+  if(S.sig>0.02){ cx.strokeStyle="#5dffb0"; cx.lineWidth=5; cx.lineCap="round"; cx.beginPath(); cx.arc(0,0,rpx+18,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,S.sig)); cx.stroke(); }
+  if(S.combo>1){ cx.fillStyle="#5dffb0"; cx.font='18px "DotGothic16"'; cx.textAlign="center"; cx.fillText("×"+(S.combo*S.elB*(S.gain?2:1)).toFixed(1),0,rpx+46); }
   cx.restore();
 }
 let stars=null;
@@ -356,7 +395,7 @@ function drawStars(B){
 }
 
 // ================== 受信シミュレーション ==================
-const beamWidth=()=>(S.easy?14:7)*(S.gain?0.5:1);   // 八木アンテナのビーム幅(度)のつもり
+const beamWidth=()=>(S.easy?10:6)*(S.gain?0.5:1);   // 八木アンテナのビーム幅(度)のつもり
 // ================== デブリ ==================
 const ROCKS=[], booms=[]; let rockT=1.5, shotFx=0;
 function rockDir(r,look){ const cosE=Math.max(0.3,Math.cos(look.el*DEG)); return enu(look.az + r.dx*r.p/cosE, look.el + r.dy*r.p); }
@@ -527,6 +566,18 @@ function updateHUD(look,dopHz,t){
   $("mult").textContent="×"+(S.combo*S.elB*(S.gain?2:1)).toFixed(1);
   const bf=$("buf"); bf.textContent=Math.floor(S.buf).toLocaleString(); bf.style.color=S.lostT>0.05?"var(--warn)":"var(--accent)";
   $("bBank").disabled=S.buf<1;
+  // シンプル表示
+  $("hearts").textContent=S.dead?"💥":"♥".repeat(Math.max(0,S.life))+"♡".repeat(Math.max(0,3-S.life));
+  $("bsN").textContent=S.score.toLocaleString();
+  const bb=$("bigBank"), bn=Math.floor(S.buf);
+  bb.disabled=bn<1; const bt=bn<1?"受信して点をためよう":`保存する ＋${bn.toLocaleString()}`; if(bb.textContent!==bt) bb.textContent=bt;
+  bb.classList.toggle("danger", bn>=1 && (S.lostT>0.05 || ROCKS.some(r=>r.p<0.35)));
+  const c=$("coach"); let txt, col;
+  if(look.el<=0){ txt=S.pass?"てんこう2がもうすぐ来る！ 矢印の方へ":"てんこう2は地球の向こう側…"; col="var(--accent)"; }
+  else if(ROCKS.some(r=>r.p<0.5)){ txt="デブリ接近！ タップで撃て"; col="#ff5a5a"; }
+  else if(S.point>0.5){ txt=S.combo>=2.5?"いいぞ！ 消える前に保存！":"受信中！ そのまま追いかけて"; col="var(--lock)"; }
+  else { txt="てんこう2を まんなかの円に入れよう"; col="var(--text)"; }
+  if(c.textContent!==txt) c.textContent=txt; c.style.color=col;
   if(!S.easy){ const e=(S.tune+dopHz)/1000; $("fShow").textContent=(e>=0?"ずれ +":"ずれ ")+e.toFixed(1)+" kHz"; $("fShow").style.color=Math.abs(e)<1.5?"var(--lock)":"var(--warn)"; }
 }
 
@@ -558,13 +609,40 @@ function passEnd(title){
   if(S.buf>0) bust();
   let best=0; try{ best=+localStorage.getItem("tk2best")||0; }catch(e){}
   const nb=S.score>best; if(nb){ try{ localStorage.setItem("tk2best",S.score); }catch(e){} best=S.score; }
-  setTimeout(()=>toast(`${title||"パス終了"}<br>スコア ${S.score.toLocaleString()} 点<br>${nb?"★ 自己ベスト更新！":"ベスト "+best.toLocaleString()+" 点"}`,4000),1700);
+  setTimeout(()=>showResult(title,nb,best),1200);
 }
 $("bBank").onclick=bank;
 $("bGain").onclick=()=>{ S.gain=!S.gain; $("bGain").textContent=S.gain?"高利得 ON":"高利得 OFF"; $("bGain").classList.toggle("on",S.gain);
   toast(S.gain?"高利得アンテナ：点数×2<br>でも照準が半分に狭くなる":"通常アンテナ",1800); };
 addEventListener("keydown",e=>{ if(e.code==="Space"){ e.preventDefault(); bank(); } if(e.key==="g"||e.key==="G") $("bGain").onclick(); if(e.key==="f"||e.key==="F") shoot(); });
 $("bShoot").onclick=shoot;
+$("bigBank").onclick=bank;
+$("gear").onclick=()=>document.body.classList.toggle("detail");
+const LEARN=[
+ "<b>なぜ電波が弱い？</b><br>てんこう2の送信機はとても小さな電力。しかも数百〜2000km先から届くので、アンテナをきっちり向けないと受信できません。",
+ "<b>スペースデブリ</b><br>地球のまわりには、使い終わった衛星やロケットの破片が何万個も回っています。とても速いので、小さな破片でも衛星には大きな脅威です。",
+ "<b>上空にいるのは数分だけ</b><br>低い軌道の衛星は約90分で地球を1周。地上から見えるのは1回10分ほどなので、その間に急いでデータを受け取ります。",
+ "<b>ドップラー効果</b><br>近づく衛星の電波は周波数が高く、遠ざかると低くなります。救急車のサイレンの音が変わるのと同じしくみです。",
+ "<b>てんこう2と日芸</b><br>てんこう2は日本大学理工学部の衛星。日芸と作ったイラストや音楽を、宇宙から地上に届けるミッションも持っています。"
+];
+function showResult(title,nb,best){
+  $("rTitle").textContent=title||"パス終了！";
+  $("rScore").textContent=S.score.toLocaleString();
+  $("rBest").textContent=nb?"★ 自己ベスト更新！":"ベスト "+best.toLocaleString()+" 点";
+  $("rImg").getContext("2d").drawImage($("rxCanvas"),0,0);
+  $("rLearn").innerHTML=LEARN[Math.random()*LEARN.length|0];
+  $("result").style.display="flex";
+}
+function goGoodPass(){
+  let t=simNow(); const l=lookAt(t);
+  if(l && l.el>0){ const cp=findPass(t); if(cp) t=cp.los+60e3; }
+  let p=null, first=null;
+  for(let i=0;i<15;i++){ const q=findPass(t); if(!q) break; if(!first) first=q; if(q.max.el>=25){ p=q; break; } t=q.los+60e3; }
+  p=p||first; if(!p){ toast("パスが見つかりません"); return; }
+  setSim(p.aos-15e3,10); $("bSpeed").textContent="×10"; S.pass=p; S.passCalcAt=performance.now(); resetRx(); S.wasAbove=false;
+  if(S.mode==="pc"){ S.view.az=p.pts[0].az; S.view.el=10; }
+}
+$("rAgain").onclick=()=>{ $("result").style.display="none"; goGoodPass(); };
 function resetRx(){ S.life=3; S.dead=false; ROCKS.length=0; booms.length=0; S.score=0; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0; S.dataKB=0; S.rows=0; S.rowAcc=0; rxCtx.fillStyle="#000"; rxCtx.fillRect(0,0,96,96); bitBuf=[]; $("bits").innerHTML=""; }
 $("bNow").onclick=()=>{ setSim(Date.now(),1); $("bSpeed").textContent="×1"; S.pass=null; };
 $("bNext").onclick=()=>{
@@ -613,7 +691,7 @@ async function startAR(){
     toast("カメラ/センサーを使えませんでした<br>("+err.message+")<br>HTTPSのページで開いてください",4000);
   }
 }
-function startPC(){ S.mode="pc"; $("start").style.display="none"; begin(); toast("ドラッグ／矢印キーで見回せます<br>「次のパス」で衛星が来る時刻へ",3000); }
+function startPC(){ S.mode="pc"; $("start").style.display="none"; begin(); toast("ドラッグ（矢印キー）で空を見回そう<br>クリックで撃つ／スペースで保存",3000); }
 $("bStartAR").onclick=startAR; $("bStartPC").onclick=startPC;
 
 let begun=false;
@@ -621,8 +699,7 @@ function begin(){
   if(begun) return; begun=true;
   rxArt=makeArt(); resetRx(); showLoc();
   try{ loadTLE(FAKE_TLE); }catch(e){ toast(e.message); }
-  // PCモードは次のパスが出る方向を向いておく
-  const p=findPass(simNow()); if(p && S.mode==="pc"){ S.view.az=p.max.az; S.view.el=Math.min(45,p.max.el*0.6); }
+  goGoodPass();
   requestAnimationFrame(frame);
 }
 if(typeof satellite==="undefined"){ document.querySelector("#start p").innerHTML+="<br><br><b style='color:#ff5a5a'>軌道計算ライブラリを読み込めませんでした。ネット接続を確認してください。</b>"; }
