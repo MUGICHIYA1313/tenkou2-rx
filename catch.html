@@ -11,12 +11,12 @@
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
 <style>
 :root{
-  --bg:#07041a; --ink:#140a24; --text:#f4eeff; --dim:#a596c8; --accent:#ffcf3a; --pkt:#4fe8ff; --warn:#ff4f6a; --ok:#6dffb0; --pink:#ff6fb5;
+  --bg:#07041a; --ink:#140a24; --text:#ffffff; --dim:#a596c8; --accent:#ffcf3a; --pkt:#4fe8ff; --warn:#ff4f6a; --ok:#6dffb0; --pink:#ff6fb5;
   --dot:"DotGothic16",system-ui,sans-serif; --num:"Press Start 2P",ui-monospace,monospace;
   --frame:0 0 0 3px var(--ink),0 0 0 6px var(--pink);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--dot);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--dot);-webkit-text-stroke:.6px currentColor;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 #sky,#ui{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
 #ui{pointer-events:none}
@@ -35,13 +35,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--d
 #picLabel{font-size:12px;margin-top:5px;color:var(--pkt)}
 #bits{font-family:var(--num);font-size:7px;margin-top:4px;white-space:nowrap;overflow:hidden;width:120px;line-height:1.4}
 #camBtn{position:fixed;right:16px;top:calc(env(safe-area-inset-top) + 120px);width:44px;height:44px;padding:0;font-size:20px;display:none;z-index:5}
-#banner{position:fixed;left:0;right:0;top:36%;text-align:center;font-family:var(--dot);font-size:40px;color:var(--accent);text-shadow:4px 4px 0 var(--ink),-2px -2px 0 var(--ink),0 0 18px rgba(255,111,181,.6);pointer-events:none;opacity:0}
+#banner{position:fixed;left:0;right:0;top:34%;text-align:center;font-family:var(--dot);font-size:min(38px,8.4vw);padding:0 10px;color:#fff;-webkit-text-stroke:1.2px #fff;text-shadow:4px 4px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink),0 0 18px rgba(255,111,181,.7);pointer-events:none;opacity:0}
 #banner.on{opacity:1;animation:pop .2s steps(2)}
 @keyframes pop{from{transform:scale(.6)}}
 #banner small{display:block;font-size:15px;color:var(--text);margin-top:8px;line-height:1.5}
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;z-index:10}
 #start{background:linear-gradient(rgba(7,4,26,.15),rgba(7,4,26,.7) 60%)}
-#start h1{font-weight:400;font-size:min(42px,10.5vw);white-space:nowrap;line-height:1.15;color:var(--ok);text-shadow:4px 4px 0 var(--ink),0 0 20px rgba(109,255,176,.55);letter-spacing:.04em}
+#start h1{font-weight:400;-webkit-text-stroke:1.5px currentColor;font-size:min(42px,10.5vw);white-space:nowrap;line-height:1.15;color:var(--ok);text-shadow:4px 4px 0 var(--ink),0 0 20px rgba(109,255,176,.55);letter-spacing:.04em}
 #start h1 span{color:var(--accent);text-shadow:4px 4px 0 var(--ink),0 0 20px rgba(255,207,58,.5)}
 .steps{display:flex;flex-direction:column;gap:12px;text-align:left;max-width:330px}
 .steps div{display:flex;gap:12px;align-items:center;font-size:15px;line-height:1.45;text-shadow:2px 2px 0 var(--ink)}
@@ -55,8 +55,8 @@ button:active{transform:translate(2px,2px)}
 #live{font-size:12px;line-height:1.75;max-width:330px;padding:8px 12px;background:rgba(14,7,36,.86);box-shadow:var(--frame)}
 #live b{color:var(--accent);font-weight:400}
 #result{display:none;background:rgba(7,4,26,.82);gap:10px;overflow-y:auto;justify-content:flex-start;padding-top:calc(env(safe-area-inset-top) + 22px);padding-bottom:30px}
-#rTitle{font-size:36px;color:var(--accent);text-shadow:4px 4px 0 var(--ink),0 0 18px rgba(255,207,58,.5)}
-#rImg{width:150px;height:150px;image-rendering:pixelated;box-shadow:var(--frame)}
+#rTitle{font-size:min(32px,8vw);white-space:nowrap;color:var(--accent);text-shadow:4px 4px 0 var(--ink),0 0 18px rgba(255,207,58,.5)}
+#rImg{width:288px;height:144px;image-rendering:pixelated;box-shadow:var(--frame)}
 #rPieces{font-size:14px;color:var(--pkt);margin-top:6px}
 #rScore{font-family:var(--num);font-size:34px;line-height:1.2;text-shadow:4px 4px 0 var(--ink)}
 #rSub{font-size:12px;color:var(--dim)}
@@ -88,9 +88,10 @@ button:active{transform:translate(2px,2px)}
 <div id="start" class="screen">
   <h1><span>てんこう2</span><br>パケットキャッチ</h1>
   <div class="steps">
-    <div><i>🛰</i><span><b style="color:var(--accent)">本物のてんこう2の軌道</b>で、<br>相模原の空を通るパスを再現！</span></div>
-    <div><i>📡</i><span>飛んでくる<b style="color:var(--pkt)">パケット</b>に照準を向けて<br>4つのミッションのデータを受信</span></div>
-    <div><i>☄️</i><span><b style="color:var(--warn)">デブリ</b>に照準を当てると<br>ライフが減るよ</span></div>
+    <div><i>🛰</i><span><b style="color:var(--accent)">本物のてんこう2の軌道</b>で<br>相模原の空を通るパスを再現！</span></div>
+    <div><i>🪐</i><span>パケットを集めて<b style="color:var(--pkt)">日芸8学科の星</b>の<br>絵を完成させ、地球に帰ろう</span></div>
+    <div><i>☄️</i><span><b style="color:var(--warn)">デブリ</b>はライフ−1、<br><b style="color:var(--ok)">宇宙人</b>は一発アウト！</span></div>
+    <div><i>💗</i><span>ごくまれに出る<b style="color:#ff6f8a">ハートの電波</b>で<br>ライフが1つ回復</span></div>
   </div>
   <div id="live">本物のてんこう2を計算中…</div>
   <button class="primary" id="bStartAR">スマホでスタート</button>
@@ -100,7 +101,7 @@ button:active{transform:translate(2px,2px)}
 
 <div id="result" class="screen">
   <div id="rTitle">完成！</div><div style="font-size:12px;color:var(--dim);margin-top:-4px;text-shadow:2px 2px 0 var(--ink)">てんこう2 ミッションレポート</div>
-  <canvas id="rImg" width="96" height="96"></canvas>
+  <canvas id="rImg" width="384" height="192"></canvas>
   <div id="rPieces"></div>
   <div id="report"></div>
   <div id="rScore">0</div>
@@ -113,8 +114,10 @@ button:active{transform:translate(2px,2px)}
 <script>
 "use strict";
 // ================== 調整用の数値 ==================
-const GAME_SEC = 90;        // 1プレイの長さ
-const GRID = 5;             // 日芸の絵のピース 5×5=25
+const STAGE_SEC = 40;       // 1ステージの制限時間（秒）
+const RUN_SEC = STAGE_SEC*8; // 衛星のパスを割り当てる全体の長さ
+const GRID = 3;             // 各学科の絵のピース 3×3=9
+const ALIEN_R = 5;          // 宇宙人の当たり判定（度）
 const CATCH_R = 5.5;          // キャッチ判定（度）
 const ROCK_R = 4.5;         // デブリ当たり判定（度）
 const SAT_SWING = 25;       // 衛星が左右に動く幅（度）
@@ -131,6 +134,16 @@ const TYPES=[
  {k:"photo", icon:"📷", rgb:"255,216,79",  name:"地球の写真",   bits:"01", f:659, w:.2},
  {k:"rad",   icon:"☢️", rgb:"197,140,255", name:"放射線データ", bits:"10", f:784, w:.15},
  {k:"radio", icon:"📻", rgb:"125,255,138", name:"無線家の声",   bits:"11", f:988, w:.15}];
+const HEAL={k:"heal", icon:"💗", rgb:"255,111,138", name:"ライフ回復", bits:"♥", f:1175, w:0};
+const DEPTS=[
+ {name:"写真学科",     c:["#ffe08a","#e29a2a","#5a2a12"], icon:"camera"},
+ {name:"映画学科",     c:["#ff9a9a","#d43a4a","#4a1220"], icon:"film"},
+ {name:"美術学科",     c:["#ffb3e0","#d45aa8","#4a1a56"], icon:"palette"},
+ {name:"音楽学科",     c:["#9ff0ff","#3a8fd0","#142a5e"], icon:"note"},
+ {name:"文芸学科",     c:["#eeeef8","#9a9ab8","#3a3a5a"], icon:"book"},
+ {name:"演劇学科",     c:["#d6a8ff","#7a3ad0","#26124e"], icon:"mask"},
+ {name:"放送学科",     c:["#ffc27a","#e2553a","#5a1622"], icon:"mic"},
+ {name:"デザイン学科", c:["#c9ff9a","#5fbf6a","#1e5232"], icon:"pencil"}];
 const COUNTRIES=["🇺🇸 アメリカ","🇬🇧 イギリス","🇧🇷 ブラジル","🇦🇺 オーストラリア","🇹🇼 台湾","🇩🇪 ドイツ","🇮🇳 インド","🇿🇦 南アフリカ","🇨🇦 カナダ","🇫🇷 フランス","🇰🇷 韓国","🇦🇷 アルゼンチン"];
 
 // ================== 共通 ==================
@@ -218,7 +231,8 @@ function sprite(rows,pal){ const hh=rows.length, ww=rows[0].length, c=document.c
 function blit(spr,x,y,s){ s=s||1; const w=spr.width*P*s, hh=spr.height*P*s; px.drawImage(spr,snap(x-w/2),snap(y-hh/2),w,hh); }
 function dotRect(x,y,w,hh,c){ px.fillStyle=c; px.fillRect(snap(x),snap(y),Math.max(P,snap(w)),Math.max(P,snap(hh))); }
 function label(text,x,y,color,size){ tx.font=`${size||13}px "DotGothic16",sans-serif`; tx.textAlign="center"; tx.lineJoin="round";
-  tx.lineWidth=4; tx.strokeStyle="#140a24"; tx.strokeText(text,x,y); tx.fillStyle=color; tx.fillText(text,x,y); }
+  tx.lineWidth=5; tx.strokeStyle="#140a24"; tx.strokeText(text,x,y); tx.strokeText(text,x+1,y);
+  tx.fillStyle=color; tx.fillText(text,x,y); tx.fillText(text,x+.8,y); tx.fillText(text,x,y+.5); }
 
 // --- ドット絵スプライト（このゲームのためのオリジナル） ---
 const SAT_SPR=sprite([
@@ -239,7 +253,18 @@ const ROCK_SPR=sprite([
  ".drrRrrrd.",
  "..drrrrd..",
  "...ddd...."],{d:"#3a1a2a",r:"#8a4a3a",R:"#c98a5a",s:"#5a2a2a"});
+const UFO=[0,1].map(b=>sprite([
+ ".....aaaa.....",
+ "...aAAAAAAa...",
+ "..aAeAAAeAAa..",
+ "..aAAAAAAAAa..",
+ ".kkkkkkkkkkkk.",
+ "kmmLmmLmmLmmLk",
+ ".kkkkkkkkkkkk.",
+ "...g..g..g....",
+ "..g...g...g..."],{a:"#7dff8a",A:"#c6ffcc",e:"#140a24",k:"#4a2280",m:"#9a5ad8",L:b?"#ffd84f":"#ff6fb5",g:b?"#ff6fb5":"#ffd84f"}));
 const GLYPH={
+ heal: [".#...#.","#.#.#.#",".......",".##.##.","#######",".#####.","..###.."],
  art:  ["..###..",".#####.","##.####","#######","###..##",".####..","..##..."],
  photo:["..##...","#######","##...##","#..#..#","##...##","#######","......."],
  rad:  ["...#...","..###..",".#.#.#.","###.###",".......",".#####.","..###.."],
@@ -284,33 +309,45 @@ function drawWorld(B,now){
     for(let a=0;a<360;a+=10){ px.beginPath(); let pen=false; for(let e=-0.5;e>=-60;e-=3){ const q=project(enu(a,e),B); if(q.front&&Math.abs(q.x)<W*3){ pen?px.lineTo(q.x,q.y):px.moveTo(q.x,q.y); pen=true; } else pen=false; } px.stroke(); }
     for(const e of [-1.5,-3.5,-6.5,-11,-18,-30,-50]){ px.beginPath(); let pen=false; for(let a=0;a<=360;a+=4){ const q=project(enu(a,e),B); if(q.front&&Math.abs(q.x)<W*3){ pen?px.lineTo(q.x,q.y):px.moveTo(q.x,q.y); pen=true; } else pen=false; } px.stroke(); }
   }
+  // いまの学科の星
+  if(G && G.state!=="count"){ const D=DEPTS[Math.min(G.stage,7)], v=enu(G.startAz+38,30), q=project(v,B);
+    if(q.front&&q.x>-150&&q.x<W+150&&q.y>-150&&q.y<H+150){ blit(D.spr,q.x,q.y,2); label(D.name+"の星",q.x,q.y+(D.spr.height*P)+14,"#ffffff",15); } }
   // 地平線
   for(const [c,w] of [["#ff8a3d",P*3],["#ffe08a",P]]){ px.strokeStyle=c; px.lineWidth=w; px.beginPath(); let pen=false;
     for(let a=0;a<=360;a+=3){ const q=project(enu(a,0),B); if(q.front&&Math.abs(q.x)<W*3){ pen?px.lineTo(q.x,q.y):px.moveTo(q.x,q.y); pen=true; } else pen=false; } px.stroke(); }
 }
 
-// ================== 絵（日芸作品に差し替え：同じ場所に art.png を置く） ==================
-const art=document.createElement("canvas"); art.width=art.height=96; const ag=art.getContext("2d");
-function makeArt(){
+// ================== 各学科の絵（art1.png〜art8.png を置くと差し替わる） ==================
+const ICONS={
+ camera:["............","...####.....",".##########.",".#........#.",".#..####..#.",".#.#....#.#.",".#.#....#.#.",".#..####..#.",".#........#.",".##########.","............","............"],
+ film:  ["............",".#.#.#.#.#..","..#.#.#.#.#.",".##########.",".##########.",".#........#.",".#..#..#..#.",".#........#.",".#........#.",".##########.","............","............"],
+ palette:["............","....#####...","..##.....##.",".#..#..#...#",".#.........#",".#..#....##.",".#.......#..","..#..#...#..","...#.....##.","....######..","............","............"],
+ note:  ["............","......######","......######","......#....#","......#....#","......#....#","......#....#","...####.####","..#####.####","..####..###.","............","............"],
+ book:  ["............",".####..####.","#....##....#","#.##.##.##.#","#....##....#","#.##.##.##.#","#....##....#","#.##.##.##.#","#....##....#",".####..####.","............","............"],
+ mask:  ["............","..########..",".#........#.",".#.##..##.#.",".#........#.",".#........#.",".#..#..#..#.","..#..##..#..","...#....#...","....####....","............","............"],
+ mic:   ["....####....","...#....#...","...#.##.#...","...#....#...","...#.##.#...",".#..####..#.",".#........#.","..#......#..","...######...",".....##.....","...######...","............"],
+ pencil:["..........#.",".........###","........###.",".......###..","......###...",".....###....","....###.....","...###......","..###.......","..##........",".#..........","............"]};
+const arts=DEPTS.map((D,i)=>{
+  const c=document.createElement("canvas"); c.width=c.height=96; const ag=c.getContext("2d");
   const s=document.createElement("canvas"); s.width=s.height=32; const g=s.getContext("2d");
-  const gr=g.createLinearGradient(0,0,0,32); gr.addColorStop(0,"#07041a"); gr.addColorStop(.7,"#3d1258"); gr.addColorStop(1,"#9a2f78"); g.fillStyle=gr; g.fillRect(0,0,32,32);
-  const st=[[3,3],[9,6],[27,4],[22,9],[5,13],[14,2],[29,15],[18,12],[1,20],[25,20]]; st.forEach(([x,y],i)=>{ g.fillStyle=["#fff","#9ff0ff","#ffb3e0","#fff1a8"][i%4]; g.fillRect(x,y,1,1); });
-  g.fillStyle="#ffb3e0"; g.fillRect(4,6,3,3); g.fillStyle="#d45aa8"; g.fillRect(5,8,2,1); g.fillStyle="#ffd1ec"; g.fillRect(2,7,7,1);
-  for(let y=19;y<32;y++) for(let x=0;x<32;x++){ const d=Math.hypot(x-16,y-46); if(d<27){ g.fillStyle=d>25.6?"#9ff0ff":((x*7+y*13)%11<4?"#5fbf6a":"#3a7ad8"); g.fillRect(x,y,1,1); } }
-  g.fillStyle="#d8b14e"; g.fillRect(14,10,4,3); g.fillStyle="#2b4fa8"; g.fillRect(9,11,4,1); g.fillRect(19,11,4,1); g.fillStyle="#fff1a8"; g.fillRect(15,11,2,1);
-  g.fillStyle="#4fe8ff"; [[15,14],[16,14],[13,16],[18,16],[12,17],[19,17],[11,18],[20,18]].forEach(([x,y])=>g.fillRect(x,y,1,1));
+  const gr=g.createLinearGradient(0,0,0,32); gr.addColorStop(0,"#07041a"); gr.addColorStop(.75,D.c[2]); gr.addColorStop(1,D.c[1]); g.fillStyle=gr; g.fillRect(0,0,32,32);
+  [[3,3],[9,6],[27,4],[22,9],[5,13],[14,2],[29,15],[2,22],[28,24]].forEach(([x,y],k)=>{ g.fillStyle=["#fff","#9ff0ff","#ffb3e0","#fff1a8"][k%4]; g.fillRect(x,y,1,1); });
+  for(let y=22;y<32;y++) for(let x=0;x<32;x++){ const d=Math.hypot(x-16,y-52); if(d<31){ g.fillStyle=d>29.5?D.c[0]:((x*7+y*13)%9<3?D.c[1]:D.c[2]); g.fillRect(x,y,1,1); } }
+  const ic=ICONS[D.icon];
+  ic.forEach((r,y)=>[...r].forEach((ch,x)=>{ if(ch==="#"){ g.fillStyle="#140a24"; g.fillRect(10+x+1,6+y+1,1,1); } }));
+  ic.forEach((r,y)=>[...r].forEach((ch,x)=>{ if(ch==="#"){ g.fillStyle=D.c[0]; g.fillRect(10+x,6+y,1,1); } }));
   ag.imageSmoothingEnabled=false; ag.drawImage(s,0,0,96,96);
-}
-makeArt();
-(()=>{ const img=new Image(); img.onload=()=>{ const s=Math.max(96/img.width,96/img.height), w=img.width*s, h=img.height*s; ag.clearRect(0,0,96,96); ag.drawImage(img,(96-w)/2,(96-h)/2,w,h); }; img.src="art.png"; })();
+  const img=new Image(); img.onload=()=>{ const k=Math.max(96/img.width,96/img.height), w=img.width*k, hh=img.height*k; ag.clearRect(0,0,96,96); ag.drawImage(img,(96-w)/2,(96-hh)/2,w,hh); }; img.src=`art${i+1}.png`;
+  D.spr=planetSprite(13,D.c[0],D.c[1],D.c[2],i%3===0);
+  return c; });
 const pc=$("picCanvas").getContext("2d");
-function drawPic(ctx,tiles,flash){
-  ctx.fillStyle="#0a0f18"; ctx.fillRect(0,0,96,96);
-  const s=96/GRID;
+function drawPic(ctx,tiles,flash,ai,ox,oy){
+  ox=ox||0; oy=oy||0; ctx.fillStyle="#0a0f18"; ctx.fillRect(ox,oy,96,96);
+  const s=96/GRID, art=arts[ai||0];
   for(let i=0;i<GRID*GRID;i++){ const x=(i%GRID)*s, y=Math.floor(i/GRID)*s;
-    if(tiles[i]) ctx.drawImage(art,x,y,s,s,x,y,s,s);
-    else { ctx.strokeStyle="rgba(150,180,220,.18)"; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,s-1,s-1); }
-    if(flash && flash.i===i && flash.t>0){ ctx.fillStyle=`rgba(79,232,255,${flash.t*1.6})`; ctx.fillRect(x,y,s,s); } }
+    if(tiles[i]) ctx.drawImage(art,x,y,s,s,ox+x,oy+y,s,s);
+    else { ctx.strokeStyle="rgba(150,180,220,.25)"; ctx.lineWidth=1; ctx.strokeRect(ox+x+.5,oy+y+.5,s-1,s-1); }
+    if(flash && flash.i===i && flash.t>0){ ctx.fillStyle=`rgba(79,232,255,${flash.t*1.6})`; ctx.fillRect(ox+x,oy+y,s,s); } }
 }
 
 // ================== 音 ==================
@@ -329,6 +366,10 @@ const sfx={
   hit:()=>{ noise(.35,.35); tone(160,.4,"sawtooth",.18,50); },
   count:hi=>tone(hi?1320:880,.12,"square",.08),
   done:()=>{ [523,659,784,1047,1319].forEach((f,i)=>tone(f,.25,"triangle",.22,null,i*.09)); },
+  heal:()=>{ [784,988,1319,1568].forEach((f,i)=>tone(f,.14,"square",.1,null,i*.06)); },
+  alien:()=>{ noise(.8,.4); tone(90,.9,"sawtooth",.25,40); tone(140,.6,"square",.1,60,.1); },
+  warp:()=>{ tone(220,1.2,"sawtooth",.08,1760); },
+  warn:()=>tone(660,.08,"square",.06),
   over:()=>{ [392,330,262].forEach((f,i)=>tone(f,.35,"triangle",.18,null,i*.16)); }
 };
 const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
@@ -336,27 +377,27 @@ const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
 // ================== ゲーム ==================
 let G=null;
 function newGame(B){
-  G={state:"count", t:-5.2, azOff:null, cOff:null, got:{art:0,photo:0,rad:0,radio:0}, sent:{art:0,photo:0,rad:0,radio:0}, bits:[], life:3, score:0, combo:0, maxCombo:0, caught:0, tiles:new Array(GRID*GRID).fill(false), completeT:null,
+  G={state:"count", t:-5.2, azOff:null, cOff:null, got:{art:0,photo:0,rad:0,radio:0,heal:0}, sent:{art:0,photo:0,rad:0,radio:0,heal:0}, stage:0, stageT:0, cleared:[], aliens:[], alienT:6, warp:0, final:false, rushStage:-1, bits:[], life:3, score:0, combo:0, maxCombo:0, caught:0, tiles:new Array(GRID*GRID).fill(false), completeT:null,
      packets:[], rocks:[], parts:[], floats:[], spawnT:0.6, rockT:2.5, startAz:vecAz(B.f), shake:0, flash:0, inv:0, lastCount:4, pf:null, rushShown:false};
   $("top").style.display="block"; $("pic").style.display="block"; $("result").style.display="none";
   prepPass();
   if(GP){ if(mode==="pc"){ G.azOff=0; view={az:GP.rise.az+20, el:12}; }
     banner(`本物のてんこう2<small>${fmtJST(GP.aos)} の相模原上空のパスを再現<br>${dirName(GP.rise.az)}の空から現れるぞ！</small>`,2300); }
 }
-function simT(){ const u=Math.max(0,Math.min(1,G.t/GAME_SEC)); return GP.gs+u*(GP.ge-GP.gs); }
+function simT(){ const u=Math.max(0,Math.min(1,G.t/RUN_SEC)); return GP.gs+u*(GP.ge-GP.gs); }
 let satCache={k:-1,v:null,l:null};
 function satLook(){ if(!GP) return null; const t=simT(); if(satCache.k!==t){ satCache={k:t,l:lookAt(t)}; } return satCache.l; }
 function satDir(){
   const l=satLook(); if(l && G.azOff!==null) return enu(l.az-G.azOff, l.el);
-  const u=Math.max(0,Math.min(1,G.t/GAME_SEC)); return enu(G.startAz-SAT_SWING+2*SAT_SWING*u, 16+30*Math.sin(Math.PI*u)); }
+  const u=Math.max(0,Math.min(1,G.t/RUN_SEC)); return enu(G.startAz-SAT_SWING+2*SAT_SWING*u, 16+30*Math.sin(Math.PI*u)); }
 function offsetDir(base,dist,a){ const az=vecAz(base), el=vecEl(base); return enu(az+dist*Math.cos(a)/Math.max(.35,Math.cos(el*DEG)), Math.max(6,Math.min(78,el+dist*Math.sin(a)))); }
-function heat(){ return Math.min(1, G.t/GAME_SEC*0.8 + G.combo*0.02); }   // だんだん忙しく
+function heat(){ return Math.min(1, G.stage*0.09 + G.stageT/STAGE_SEC*0.3 + G.combo*0.02); }   // ステージが進むほど忙しく
 function spawnPacket(){
   const s=satDir(); const to=offsetDir(s,rnd(10,36),Math.random()*Math.PI*2);
   let r=Math.random(), ty=TYPES[0]; for(const T of TYPES){ if((r-=T.w)<=0){ ty=T; break; } }
-  if(G.tiles.every(Boolean) && ty.k==="art" && Math.random()<.5) ty=TYPES[1+(Math.random()*3|0)];
+  if(G.life<3 && Math.random()<.035) ty=HEAL;           // ほんとにたまーに回復
   G.sent[ty.k]++;
-  G.packets.push({ty,from:s,to,age:0,fly:.55,life:Math.max(1.9,3.6-heat()*1.5)}); sfx.spawn();
+  G.packets.push({ty,from:s,to,age:0,fly:.55,life:ty===HEAL?2.2:Math.max(1.9,3.6-heat()*1.5)}); sfx.spawn();
 }
 function spawnRock(B){
   // 照準のまわりに出現して、ゆっくり横切る
@@ -364,6 +405,19 @@ function spawnRock(B){
   let v=norm(cross(p,[0,0,1])); if(!isFinite(v[0])) v=[1,0,0]; if(Math.random()<.5) v=v.map(x=>-x);
   const up=norm(cross(v,p)); const mix=rnd(-.6,.6); v=norm(add(v,up,mix));
   G.rocks.push({p, v, speed:rnd(4,8)+heat()*5, age:0, life:rnd(6,8), spin:Math.random()*6, sz:rnd(.8,1.3)});
+}
+function spawnAlien(B){
+  const a=Math.random()*Math.PI*2, p=offsetDir(B.f,rnd(18,28),a);
+  let v=norm(cross(p,[0,0,1])); if(!isFinite(v[0])) v=[1,0,0]; if(Math.random()<.5) v=v.map(x=>-x);
+  G.aliens.push({p,v,speed:rnd(3,4.5)+G.stage*.45,age:0,life:9,warn:1.4,ph:Math.random()*6});
+}
+function stageClear(){
+  G.cleared.push(G.stage); const bonus=Math.round((STAGE_SEC-G.stageT)*30); G.score+=bonus;
+  G.packets.length=0; G.rocks.length=0; G.aliens.length=0; sfx.done(); buzz([60,40,60]);
+  G.state="warp"; G.warp=2.6; G.final=G.stage>=DEPTS.length-1;
+  const D=DEPTS[G.stage];
+  banner(G.final?`${D.name}の絵が完成！<small>8枚そろった！ 地球へ帰還！</small>`:`${D.name}の絵が完成！<small>時間ボーナス +${bonus}<br>次は ${DEPTS[G.stage+1].name}の星へ</small>`,2500);
+  setTimeout(()=>sfx.warp(),700);
 }
 function revealTile(){
   const free=[]; G.tiles.forEach((v,i)=>{ if(!v) free.push(i); }); if(!free.length) return -1;
@@ -386,17 +440,24 @@ function update(dt,B){
     if(mode==="ar" && compass!=null && Math.abs(B.f[2])<.85){ const s=wrap180(compass-vecAz(B.f)); G.cOff = G.cOff==null ? s : G.cOff+wrap180(s-G.cOff)*.15; }
     if(G.t>=0){ G.state="play"; G.startAz=vecAz(B.f);
       if(GP && G.azOff===null){ G.azOff = G.cOff!=null ? G.cOff : wrap180(GP.max.az-vecAz(B.f)); }
-      banner("スタート！",800); sfx.count(true); }
+      banner(`ステージ1/8<small>${DEPTS[0].name}の星</small>`,1500); sfx.count(true); }
     return;
   }
+  if(G.state==="warp"){ G.warp-=dt;
+    if(G.warp<=0){ if(G.final){ end("完全クリア！"); return; }
+      G.stage++; G.stageT=0; G.tiles=new Array(GRID*GRID).fill(false); G.state="play"; G.alienT=rnd(4,7);
+      banner(`ステージ${G.stage+1}/8<small>${DEPTS[G.stage].name}の星</small>`,1500); sfx.count(true); }
+    return; }
   if(G.state!=="play") return;
+  G.stageT+=dt;
 
   // 出現
   G.spawnT-=dt;
   if(G.spawnT<=0){ spawnPacket(); if(Math.random()<heat()*.45) spawnPacket(); G.spawnT=Math.max(.45,1.15-heat()*.6)*rnd(.8,1.2); }
   G.rockT-=dt;
   if(G.rockT<=0){ spawnRock(B); G.rockT=Math.max(.9,2.6-heat()*1.6)*rnd(.8,1.2); }
-  if(!G.rushShown && G.t>GAME_SEC-20){ G.rushShown=true; banner("ラスト20秒！<small>パケットが増えるぞ</small>",1600); }
+  if(G.rushStage!==G.stage && G.stageT>STAGE_SEC-10){ G.rushStage=G.stage; banner("あと10秒！",1000); }
+  if(G.stage>=1){ G.alienT-=dt; if(G.alienT<=0 && !G.aliens.length){ spawnAlien(B); G.alienT=Math.max(6,13-G.stage)*rnd(.8,1.2); } }
 
   // パケット
   for(let i=G.packets.length-1;i>=0;i--){
@@ -405,16 +466,17 @@ function update(dt,B){
     if(f>.35 && ang(k.pos,B.f)<CATCH_R){
       G.packets.splice(i,1); G.combo++; G.maxCombo=Math.max(G.maxCombo,G.combo); G.caught++;
       const T=k.ty; G.got[T.k]++; G.bits.push(T); if(G.bits.length>10) G.bits.shift();
-      const pts=(100+G.combo*20)*(G.completeT!==null?2:1); G.score+=pts;
+      if(T===HEAL){ G.life=Math.min(3,G.life+1); const p=project(k.pos,B); burst(p.x,p.y,T.rgb,24); floatText(p.x,p.y-14,"♥ ライフ回復！","#ff6f8a"); banner("ライフ回復！",900); sfx.heal(); buzz([30,30,30]); continue; }
+      const pts=(100+G.combo*20)*(1+G.stage*.25)|0; G.score+=pts;
       const p=project(k.pos,B); burst(p.x,p.y,T.rgb,16); floatText(p.x,p.y-14,"+"+pts+"  "+T.bits,`rgb(${T.rgb})`);
       if(T.k==="photo") floatText(p.x,p.y+16,"📷 地球の写真","#ffd84f");
       if(T.k==="rad") floatText(p.x,p.y+16,"☢️ 放射線を観測","#c58cff");
       if(T.k==="radio") floatText(p.x,p.y+16,COUNTRIES[Math.random()*COUNTRIES.length|0]+"から","#7dff8a");
       sfx.catch(G.combo,T.f); buzz(15); const sc=$("score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
-      if(T.k==="art" && revealTile()>=0 && G.tiles.every(Boolean)){ G.completeT=G.t; sfx.done(); buzz([60,40,60]); banner("日芸の絵が完成！<small>残り時間は得点2倍</small>",1800); }
+      if(T.k==="art" && revealTile()>=0 && G.tiles.every(Boolean)){ stageClear(); return; }
       continue;
     }
-    if(k.age>k.fly+k.life){ G.packets.splice(i,1); if(G.combo>=3) floatText(W/2,H/2+64,"コンボ切れ","#8a97ab"); G.combo=0; sfx.miss(); }
+    if(k.age>k.fly+k.life){ G.packets.splice(i,1); if(k.ty===HEAL) continue; if(G.combo>=3) floatText(W/2,H/2+64,"コンボ切れ","#8a97ab"); G.combo=0; sfx.miss(); }
   }
   // デブリ
   for(let i=G.rocks.length-1;i>=0;i--){
@@ -423,12 +485,20 @@ function update(dt,B){
     if(r.age>.7 && G.inv<=0 && ang(r.p,B.f)<ROCK_R){
       G.rocks.splice(i,1); G.life--; G.combo=0; G.shake=.45; G.flash=.5; G.inv=1.2; sfx.hit(); buzz(250);
       const p=project(r.p,B); burst(p.x,p.y,"255,110,60",26);
-      if(G.life<=0){ end(G.tiles.every(Boolean)?"完成！ でも大破…":"大破…"); return; }
+      if(G.life<=0){ end("大破…"); return; }
       banner("デブリ衝突！",900); continue;
     }
     if(r.age>r.life) G.rocks.splice(i,1);
   }
-  if(G.t>=GAME_SEC) end(G.tiles.every(Boolean)?"完成！":"タイムアップ");
+  // 宇宙人（一発アウト）
+  for(let i=G.aliens.length-1;i>=0;i--){
+    const a=G.aliens[i]; a.age+=dt;
+    if(a.age<a.warn){ if(Math.floor(a.age*6)!==Math.floor((a.age-dt)*6)) sfx.warn(); continue; }
+    const up=norm(cross(a.v,a.p)); a.v=norm(add(a.v,up,Math.sin(a.age*2.4+a.ph)*.05)); a.v=norm(add(a.v,a.p,-dot(a.v,a.p))); a.p=norm(add(a.p,a.v,a.speed*DEG*dt));
+    if(ang(a.p,B.f)<ALIEN_R){ G.life=0; G.shake=.8; G.flash=1; sfx.alien(); buzz([300,80,300]); const p=project(a.p,B); burst(p.x,p.y,"125,255,138",40); end("宇宙人につかまった…"); return; }
+    if(a.age>a.warn+a.life) G.aliens.splice(i,1);
+  }
+  if(G.stageT>=STAGE_SEC) end("タイムアップ");
 }
 
 const LEARN=[
@@ -444,23 +514,27 @@ const LEARN=[
  "<b>てんこう2と日芸</b><br>てんこう2は日本大学理工学部の衛星。日芸と作ったイラストや音楽を、宇宙から地上に届けるミッションも持っています。"
 ];
 function end(title){
-  G.state="end"; const pieces=G.tiles.filter(Boolean).length;
-  if(pieces===GRID*GRID) G.score+=Math.round((GAME_SEC-(G.completeT||GAME_SEC))*50);
+  G.state="end"; const n=G.cleared.length;
   let best=0; try{ best=+localStorage.getItem("tk2catch")||0; }catch(e){}
   const nb=G.score>best; if(nb){ try{ localStorage.setItem("tk2catch",G.score); }catch(e){} best=G.score; }
-  title.includes("大破")?sfx.over():(pieces===GRID*GRID?sfx.done():sfx.over());
+  if(title==="完全クリア！") sfx.done(); else if(!title.includes("宇宙人")) sfx.over();
   setTimeout(()=>{
     $("rTitle").textContent=title;
-    drawPic($("rImg").getContext("2d"),G.tiles,null);
-    $("rPieces").textContent=`🎨 日芸の絵 ${pieces} / ${GRID*GRID} ピース`+(G.completeT!==null?`（${G.completeT.toFixed(1)}秒で完成）`:"");
-    $("report").innerHTML=TYPES.map(T=>{ const s=G.sent[T.k]||0, g=G.got[T.k]||0, pc=s?Math.round(g/s*100):0;
+    const g=$("rImg").getContext("2d"); g.imageSmoothingEnabled=false; g.fillStyle="#140a24"; g.fillRect(0,0,384,192);
+    DEPTS.forEach((D,i)=>{ const ox=(i%4)*96, oy=Math.floor(i/4)*96;
+      if(G.cleared.includes(i)) g.drawImage(arts[i],ox,oy);
+      else if(i===G.stage) drawPic(g,G.tiles,null,i,ox,oy);
+      else { g.fillStyle="#1c0f3a"; g.fillRect(ox,oy,96,96); g.fillStyle="#4a3a7a"; g.font='40px "DotGothic16"'; g.textAlign="center"; g.fillText("?",ox+48,oy+62); }
+      g.strokeStyle="#140a24"; g.lineWidth=4; g.strokeRect(ox+2,oy+2,92,92); });
+    $("rPieces").innerHTML= title==="完全クリア！" ? "🌏 日芸8学科の星をすべてめぐって地球に帰還！" : `クリアした学科の星 ${n} / 8`+(n<8?`<br><span style="color:var(--dim);font-size:12px">次は ${DEPTS[Math.min(7,G.stage)].name}の星から</span>`:"");
+    $("report").innerHTML=TYPES.map(T=>{ const s=G.sent[T.k]||0, gg=G.got[T.k]||0, pc=s?Math.round(gg/s*100):0;
       return `<div class="row"><span class="nm">${T.icon} ${T.name}</span><span class="bar"><i style="width:${pc}%;background:rgb(${T.rgb})"></i></span><span class="ct">${pc}%</span></div>`; }).join("");
     $("rScore").textContent=G.score.toLocaleString();
     $("rSub").textContent=`最大コンボ ${G.maxCombo}　`+(nb?"★ 自己ベスト更新！":`ベスト ${best.toLocaleString()}`);
     const np=REC?nextPass(Date.now(),30):null;
     $("rLearn").innerHTML=LEARN[Math.random()*LEARN.length|0]+(np?`<br><br><b>本物のてんこう2</b><br>相模原の空に次に高く昇るのは ${passText(np).replace(/<\/?b>/g,"")}。外で見上げてみてね！`:"");
-    $("result").style.display="flex"; $("top").style.display="none"; $("pic").style.display="none";
-  },900);
+    $("result").style.display="flex"; $("top").style.display="none"; $("pic").style.display="none"; $("result").scrollTop=0;
+  },title.includes("宇宙人")?1300:900);
 }
 
 // ================== 描画 ==================
@@ -484,6 +558,13 @@ function draw(B,now){
     if(sp.front){ const blink=Math.floor(now/250)%3;
       px.strokeStyle="rgba(79,232,255,.8)"; px.lineWidth=P; for(let i=0;i<=blink;i++){ const r=snap(44+i*14); px.strokeRect(snap(sp.x)-r,snap(sp.y)-r,r*2,r*2); }
       blit(SAT_SPR,sp.x,sp.y,2); label("てんこう2",sp.x,sp.y-30,"#ffcf3a",14); }
+    // 宇宙人
+    for(const a of G.aliens){ const p=project(a.p,B); if(!p.front) continue;
+      const warn=a.age<a.warn, blinkOn=Math.floor(now/(warn?110:200))%2;
+      if(warn && !blinkOn) { label("！",p.x,p.y+8,"#ff4f6a",30); continue; }
+      blit(UFO[blinkOn],p.x,p.y,2);
+      label(warn?"キケン！":"即死！",p.x,p.y-30,"#ff4f6a",warn?16:13);
+      if(ang(a.p,B.f)<ALIEN_R*2.4 && blinkOn){ px.strokeStyle="#ff4f6a"; px.lineWidth=P*2; const q=snap(ALIEN_R*degPx()); px.strokeRect(snap(p.x)-q,snap(p.y)-q,q*2,q*2); } }
     // デブリ
     const FL=["#fff3a0","#ffd84f","#ffb13b","#ff7a3d","#e2453a","#8a2a4a"];
     for(const r of G.rocks){ const p=project(r.p,B); if(!p.front) continue;
@@ -504,8 +585,12 @@ function draw(B,now){
     for(const k of G.packets){ if(k.pos && k.age>k.fly*.5) arrowTo(k.pos,B,`rgb(${k.ty.rgb})`); }
     arrowTo(s,B,"#ffcf3a","てんこう2");
   }
+  // ワープ演出
+  if(G && G.state==="warp"){ const k=Math.max(0,1-G.warp/2.6);
+    for(let i=0;i<70;i++){ const a=i*2.399, r0=((i*97)%100)/100, r=((r0+now/700*(1+k*3))%1)*Math.max(W,H)*.8, len=20+k*120;
+      const c=Math.cos(a), s=Math.sin(a); for(let j=0;j<len;j+=P*2) dotRect(W/2+c*(r+j),H/2+s*(r+j),P,P,["#ffffff","#9ff0ff","#ffb3e0"][i%3]); } }
   // 照準（ドットのカギ形）
-  if(G && G.state!=="end"){
+  if(G && G.state!=="end" && G.state!=="warp"){
   const R=snap(CATCH_R*degPx()), cx0=snap(W/2), cy0=snap(H/2), L=snap(R*.45);
   const hot=G&&G.packets.some(k=>k.pos&&ang(k.pos,B.f)<CATCH_R*1.8), col=hot?"#4fe8ff":"#f4eeff";
   for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const x=cx0+sx*R, y=cy0+sy*R;
@@ -523,13 +608,13 @@ function updateHUD(){
   if(!G) return;
   $("hearts").textContent="♥".repeat(Math.max(0,G.life))+"♡".repeat(Math.max(0,3-G.life));
   $("score").textContent=G.score.toLocaleString();
-  const left=Math.max(0,Math.min(1,1-G.t/GAME_SEC)); $("timefill").style.transform=`scaleX(${G.state==="count"?1:left})`;
-  $("timefill").style.background=left<.22?"var(--warn)":"var(--accent)";
-  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=n===GRID*GRID?"🎨 完成！ 得点2倍":`🎨 日芸の絵 ${n} / ${GRID*GRID}`;
+  const left=Math.max(0,Math.min(1,1-G.stageT/STAGE_SEC)); $("timefill").style.transform=`scaleX(${G.state==="play"?left:1})`;
+  $("timefill").style.background=left<.25?"var(--warn)":"";
+  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=`ST${Math.min(G.stage,7)+1}/8 ${DEPTS[Math.min(G.stage,7)].name} ${n}/${GRID*GRID}`;
   $("bits").innerHTML=G.bits.map(T=>`<span style="color:rgb(${T.rgb})">${T.bits}</span>`).join(" ")||"&nbsp;";
   const l=G.state!=="count"?satLook():null;
   $("sub").textContent = l ? `てんこう2：高度 ${Math.round(l.alt)}km・相模原から ${Math.round(l.rng).toLocaleString()}km・${dirName(l.az)}の空 ${Math.max(0,l.el).toFixed(0)}°` : (GP?"本物の軌道データで計算中":"");
-  drawPic(pc,G.tiles,G.pf);
+  drawPic(pc,G.tiles,G.pf,Math.min(G.stage,7));
 }
 
 // ================== ループ・入力 ==================
