@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>てんこう2 AR受信</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<style>
+:root{
+  --bg:#05070c; --panel:rgba(8,12,20,.72); --line:rgba(150,180,220,.22);
+  --text:#e8eef8; --dim:#8a97ab; --accent:#ffb13b; --lock:#5dffb0; --warn:#ff5a5a;
+  --mono:"JetBrains Mono",ui-monospace,monospace; --dot:"DotGothic16",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#sky{position:fixed;inset:0;width:100%;height:100%}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px}
+#hud{top:calc(env(safe-area-inset-top) + 10px);left:10px;right:10px;padding:10px 12px;font-size:11px;line-height:1.55}
+#hud .row{display:flex;justify-content:space-between;gap:8px}
+#hud .name{font-family:var(--dot);font-size:15px;color:var(--accent)}
+#hud .status{font-family:var(--dot);font-size:13px}
+.k{color:var(--dim)}
+#meter{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin:6px 0 2px}
+#meterFill{height:100%;width:0;background:linear-gradient(90deg,#3a6cff,var(--lock));transition:width .15s}
+#bits{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;height:14px}
+#bits b{color:var(--lock);font-weight:400}#bits i{color:var(--warn);font-style:normal}
+#act{bottom:calc(env(safe-area-inset-bottom) + 64px);left:10px;right:10px;display:flex;gap:6px;padding:6px}
+#act button{padding:12px 8px;font-size:14px}
+#bBank{flex:2;background:var(--accent);color:#1a1000;border-color:var(--accent)}
+#bBank:disabled{opacity:.35}
+#bShoot{flex:1.4;background:rgba(255,90,90,.22);border-color:#ff5a5a;color:#ffd0d0}
+#score{font-family:var(--dot);font-size:13px;color:var(--text)}
+#rx{bottom:calc(env(safe-area-inset-bottom) + 124px);right:10px;padding:8px;width:132px;text-align:center;font-size:10px}
+#rxCanvas{width:112px;height:112px;image-rendering:pixelated;display:block;margin:0 auto 4px;border-radius:4px;background:#000}
+#bar{bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;padding:6px;display:flex;gap:6px;justify-content:space-between}
+button{font-family:var(--dot);font-size:13px;color:var(--text);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:8px;padding:9px 8px;flex:1;cursor:pointer;white-space:nowrap}
+button:active{background:rgba(255,177,59,.25)}
+button.on{border-color:var(--accent);color:var(--accent)}
+#tune{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom) + 124px);display:none;flex-direction:column;gap:6px;width:88px}
+#tune .f{font-size:10px;text-align:center;padding:6px 4px}
+#start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:radial-gradient(ellipse at 50% 30%,#132036 0%,var(--bg) 70%);z-index:10}
+#start h1{font-family:var(--dot);font-size:30px;font-weight:400;letter-spacing:.04em}
+#start h1 span{color:var(--accent)}
+#start p{font-size:12px;color:var(--dim);line-height:1.8;max-width:340px}
+#start button{flex:none;width:260px;padding:14px;font-size:16px}
+#start .primary{background:var(--accent);color:#1a1000;border-color:var(--accent)}
+#settings{inset:auto 10px calc(env(safe-area-inset-bottom) + 64px) 10px;padding:12px;font-size:11px;display:none;max-height:70vh;overflow:auto;z-index:5}
+#settings label{display:block;margin:8px 0 4px;color:var(--dim)}
+#settings textarea{width:100%;height:68px;background:#000;color:var(--text);border:1px solid var(--line);border-radius:6px;font:10px var(--mono);padding:6px;user-select:text;-webkit-user-select:text}
+#settings input[type=range]{width:100%}
+#settings .btns{display:flex;gap:6px;margin-top:8px}
+#msg{position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--dot);font-size:14px;padding:10px 16px;border-radius:10px;background:rgba(0,0,0,.75);border:1px solid var(--line);display:none;z-index:20;text-align:center;max-width:80%}
+</style>
+</head>
+<body>
+<video id="video" playsinline muted autoplay></video>
+<canvas id="sky"></canvas>
+
+<div id="hud" class="panel">
+  <div class="row"><span><span class="name" id="satName">—</span> <span id="life" style="color:#ff5a5a;font-size:14px"></span></span><span class="status" id="status">—</span></div>
+  <div class="row"><span><span class="k">方位</span> <span id="az">—</span> <span class="k">仰角</span> <span id="el">—</span></span><span><span class="k">距離</span> <span id="rng">—</span></span></div>
+  <div class="row"><span><span class="k">ドップラー</span> <span id="dop">—</span></span><span><span class="k">時刻</span> <span id="clock">—</span></span></div>
+  <div id="meter"><div id="meterFill"></div></div>
+  <div class="row"><span><span class="k">受信</span> <span id="sig">0%</span></span><span><span class="k">データ</span> <span id="data">0.0 KB</span></span></div>
+  <div class="row"><span><span class="k">スコア</span> <span id="score">0</span></span><span><span class="k">倍率</span> <span id="mult">×1.0</span></span><span><span class="k">未保存</span> <span id="buf" style="color:var(--accent)">0</span></span></div>
+  <div id="bits"></div>
+</div>
+
+<div id="rx" class="panel"><canvas id="rxCanvas" width="96" height="96"></canvas><span id="rxLabel">受信画像 0%</span></div>
+
+<div id="act" class="panel"><button id="bGain">高利得 OFF</button><button id="bShoot">撃つ</button><button id="bBank" disabled>保存</button></div>
+
+<div id="tune">
+  <button id="fUp">周波数 ＋</button>
+  <div class="panel f" style="position:static" id="fShow">±0.0 kHz</div>
+  <button id="fDn">周波数 −</button>
+</div>
+
+<div id="bar" class="panel">
+  <button id="bNow">いま</button>
+  <button id="bNext">次のパス</button>
+  <button id="bSpeed">×1</button>
+  <button id="bSound">音 OFF</button>
+  <button id="bSet">設定</button>
+</div>
+
+<div id="settings" class="panel">
+  <div class="btns"><button id="bMode">かんたん</button><button id="bLoc">現在地を使う</button><button id="bClose">閉じる</button></div>
+  <label>方位の補正（建物内でズレる時に調整）<span id="offV">0°</span></label>
+  <input type="range" id="off" min="-180" max="180" value="0">
+  <label>カメラの画角（縦） <span id="fovV">60°</span></label>
+  <input type="range" id="fov" min="35" max="90" value="60">
+  <label>軌道データ（TLE：名前・1行目・2行目）</label>
+  <textarea id="tle"></textarea>
+  <div class="btns"><button id="bApply">反映</button><button id="bISS">本物のISSを取得</button><button id="bFake">架空データに戻す</button></div>
+  <label id="locLabel"></label>
+</div>
+
+<div id="start">
+  <h1><span>てんこう2</span><br>AR受信</h1>
+  <p>スマホを空にかざして、衛星を見つけて追いかけよう。<br>電波は弱いから、アンテナ（画面の中心）をぴったり合わせ続けるのがコツ。<br><br>受信を続けるほど倍率アップ。でも電波が途切れると<b style="color:#ffb13b">未保存の点は消える</b>。「保存」のタイミングが勝負！<br>飛んでくる<b style="color:#ff5a5a">デブリ（宇宙ゴミ）</b>は画面タップで撃ち落とせ。ぶつかるとライフが減るぞ。<br><br>※現在は架空の軌道データ（ISS相当）で動作中</p>
+  <button class="primary" id="bStartAR">カメラでスタート</button>
+  <button id="bStartPC">PCで試す（ドラッグで見回す）</button>
+</div>
+<div id="msg"></div>
+
+<script>
+"use strict";
+// ================== 設定 ==================
+const FAKE_TLE = [
+  "TENKOU-2 SIM (架空・ISS相当)",
+  "1 99999U 26999A   26287.50000000  .00000000  00000-0  00000-0 0  9990",
+  "2 99999  51.6400 290.0000 0005000  90.0000 180.0000 15.50000000100009"
+];
+const F0 = 435.860e6;            // てんこう2のダウンリンク周波数（CW/GMSK等）
+const C_KM = 299792.458;
+const DEFAULT_OBS = {lat:35.5582, lon:139.3956, h:0.15, name:"JAXA相模原キャンパス"};
+const DEG = Math.PI/180;
+
+// ================== 状態 ==================
+const S = {
+  mode:null,            // "ar" | "pc"
+  easy:true,
+  satrec:null, satName:"",
+  obs:{...DEFAULT_OBS},
+  simOffset:0, speed:1, simBase:Date.now(), wallBase:performance.now(),
+  view:{az:180, el:20},  // PCモードの視線
+  basis:null,
+  azOffset:0, compassOff:null,
+  vfov:60,
+  tune:0,               // 手動同調オフセット(Hz)
+  sound:false,
+  sig:0, dataKB:0, rows:0, rowAcc:0,
+  pass:null, passCalcAt:0,
+  life:3, dead:false, flash:0, lastLook:null,
+  gain:false, score:0, buf:0, combo:1, elB:1, lockT:0, lostT:0, wasAbove:false,
+  lastLook:null
+};
+const $ = id => document.getElementById(id);
+
+// ================== 軌道計算 ==================
+function loadTLE(lines){
+  const L = lines.map(s=>s.trim()).filter(Boolean);
+  let name="SAT", l1, l2;
+  if (L.length>=3){ name=L[0]; l1=L[1]; l2=L[2]; } else { l1=L[0]; l2=L[1]; }
+  const rec = satellite.twoline2satrec(l1,l2);
+  const test = satellite.propagate(rec,new Date(simNow()));
+  if (!test || !test.position) throw new Error("この時刻では計算できない軌道データです");
+  S.satrec=rec; S.satName=name; S.pass=null; S.passCalcAt=0;
+  $("satName").textContent=name;
+  $("tle").value=[name,l1,l2].join("\n");
+}
+function obsGd(){ return {latitude:S.obs.lat*DEG, longitude:S.obs.lon*DEG, height:S.obs.h}; }
+function lookAt(t){
+  const pv = satellite.propagate(S.satrec, new Date(t));
+  if(!pv || !pv.position) return null;
+  const ecf = satellite.eciToEcf(pv.position, satellite.gstime(new Date(t)));
+  const la = satellite.ecfToLookAngles(obsGd(), ecf);
+  return {az:la.azimuth/DEG, el:la.elevation/DEG, rng:la.rangeSat};
+}
+function findPass(from){
+  // 現在進行中、または次のパス（最大2日先まで）
+  let t=from, l=lookAt(t); if(!l) return null;
+  if(l.el>0){ while(l && l.el>0 && from-t<1800e3){ t-=10e3; l=lookAt(t);} }
+  else { let n=0; while(l && l.el<=0 && n<17280){ t+=10e3; l=lookAt(t); n++; } if(!l||l.el<=0) return null; t-=10e3; }
+  // AOSを1秒精度で
+  while((l=lookAt(t)) && l.el<=0) t+=1e3;
+  const aos=t, pts=[]; let max={el:-90};
+  while((l=lookAt(t)) && l.el>0){ pts.push({t,...l}); if(l.el>max.el) max={t,...l}; t+=15e3; }
+  return {aos, los:t, max, pts};
+}
+
+// ================== 時刻 ==================
+function simNow(){ return S.simBase + (performance.now()-S.wallBase)*S.speed; }
+function setSim(t, speed){ S.simBase=t; S.wallBase=performance.now(); if(speed!=null) S.speed=speed; }
+
+// ================== ベクトル ==================
+const enu = (az,el)=>[Math.cos(el*DEG)*Math.sin(az*DEG), Math.cos(el*DEG)*Math.cos(az*DEG), Math.sin(el*DEG)];
+const dot = (a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const norm = a=>{const n=Math.hypot(...a)||1;return a.map(v=>v/n)};
+const wrap180 = a=>((a+540)%360)-180;
+
+// PCモード：視線az/elから基底を作る
+function basisFromView(az,el){
+  const f=enu(az,el), upW=[0,0,1];
+  let r=norm(cross(f,upW)); if(!isFinite(r[0])) r=[1,0,0];
+  const u=norm(cross(r,f));
+  return {f,u,r};
+}
+// AR：DeviceOrientation(ZXY)から基底を作る
+let ori=null;
+function basisFromOri(o){
+  const a=(o.alpha||0)*DEG, b=(o.beta||0)*DEG, g=(o.gamma||0)*DEG;
+  const ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),cg=Math.cos(g),sg=Math.sin(g);
+  // R = Rz(a)Rx(b)Ry(g) の各列
+  const R=[[ca*cg-sa*sb*sg, -cb*sa, ca*sg+cg*sa*sb],
+           [cg*sa+ca*sb*sg,  ca*cb, sa*sg-ca*cg*sb],
+           [-cb*sg,          sb,    cb*cg]];
+  const col=i=>[R[0][i],R[1][i],R[2][i]];
+  let r=col(0), u=col(1); const f=col(2).map(v=>-v);
+  const th=((screen.orientation&&screen.orientation.angle)||window.orientation||0)*DEG;
+  const u2=u.map((v,i)=>Math.cos(th)*v+Math.sin(th)*r[i]);
+  const r2=r.map((v,i)=>Math.cos(th)*v-Math.sin(th)*u[i]);
+  return {f,u:u2,r:r2};
+}
+function rotZ(B,deg){ // 世界をZ軸回りに回して方位補正（時計回り＝方位+）
+  const c=Math.cos(-deg*DEG), s=Math.sin(-deg*DEG);
+  const rz=v=>[c*v[0]-s*v[1], s*v[0]+c*v[1], v[2]];
+  return {f:rz(B.f),u:rz(B.u),r:rz(B.r)};
+}
+const vecAz = v=>(Math.atan2(v[0],v[1])/DEG+360)%360;
+
+function onOrientation(e, absolute){
+  if(absolute===false && S.absSeen) return;
+  if(absolute) S.absSeen=true;
+  ori={alpha:e.alpha,beta:e.beta,gamma:e.gamma};
+  // iOS：コンパス方位で自動補正（端末を立てている時だけ）
+  if(e.webkitCompassHeading!=null && !S.absSeen){
+    const B=basisFromOri(ori);
+    if(Math.abs(B.f[2])<0.85){
+      const sample=wrap180(e.webkitCompassHeading - vecAz(B.f));
+      S.compassOff = S.compassOff==null ? sample : S.compassOff + wrap180(sample-S.compassOff)*0.08;
+    }
+  }
+}
+
+// ================== 描画 ==================
+const cv=$("sky"), cx=cv.getContext("2d");
+let W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener("resize",resize); resize();
+
+function project(v,B){
+  const z=dot(v,B.f); const x=dot(v,B.r), y=dot(v,B.u);
+  const f=(H/2)/Math.tan(S.vfov*DEG/2);
+  return {x:W/2+x/z*f, y:H/2-y/z*f, front:z>0.02, x0:x, y0:y};
+}
+function poly(pts,B,style,width,dash){
+  cx.save(); cx.strokeStyle=style; cx.lineWidth=width; cx.setLineDash(dash||[]);
+  cx.beginPath(); let pen=false;
+  for(const v of pts){ const p=project(v,B); if(p.front && Math.abs(p.x)<W*4 && Math.abs(p.y)<H*4){ pen?cx.lineTo(p.x,p.y):cx.moveTo(p.x,p.y); pen=true; } else pen=false; }
+  cx.stroke(); cx.restore();
+}
+function label(v,B,text,color,size,font){
+  const p=project(v,B); if(!p.front) return;
+  cx.fillStyle=color; cx.font=`${size||12}px ${font||'"DotGothic16",sans-serif'}`; cx.textAlign="center"; cx.fillText(text,p.x,p.y);
+}
+
+function drawSky(B, look, t){
+  cx.clearRect(0,0,W,H);
+  if(S.mode==="pc"){ // 疑似の空
+    const g=cx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#03050b"); g.addColorStop(1,"#0c1626");
+    cx.fillStyle=g; cx.fillRect(0,0,W,H);
+    drawStars(B);
+  }
+  // 地面側をうっすら
+  const gp=[]; for(let a=0;a<=360;a+=5) gp.push(enu(a,0));
+  poly(gp,B,"rgba(255,177,59,.85)",1.5);
+  for(const e of [30,60]){ const pts=[]; for(let a=0;a<=360;a+=5) pts.push(enu(a,e)); poly(pts,B,"rgba(150,180,220,.25)",1,[4,6]); label(enu(B?vecAz(B.f):0,e),B,e+"°","rgba(150,180,220,.5)",10,"JetBrains Mono"); }
+  for(let a=0;a<360;a+=15){ poly([enu(a,0),enu(a,a%90?1.2:3)],B,"rgba(255,177,59,.85)",1.5); }
+  const names={0:"北",45:"北東",90:"東",135:"南東",180:"南",225:"南西",270:"西",315:"北西"};
+  for(const a in names) label(enu(+a,-3.5),B,names[a],"#ffb13b",a%90?11:16);
+
+  // パスの軌跡
+  if(S.pass){
+    const pts=S.pass.pts.map(p=>enu(p.az,p.el));
+    poly(pts,B,"rgba(93,255,176,.55)",2,[6,6]);
+    const tf=ms=>new Date(ms).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+    const p0=S.pass.pts[0], p1=S.pass.pts[S.pass.pts.length-1];
+    if(p0) label(enu(p0.az,p0.el+2),B,"出現 "+tf(S.pass.aos),"rgba(93,255,176,.9)",11);
+    if(p1) label(enu(p1.az,p1.el+2),B,"消失 "+tf(S.pass.los),"rgba(93,255,176,.9)",11);
+    label(enu(S.pass.max.az,S.pass.max.el+3),B,"最大 "+S.pass.max.el.toFixed(0)+"°","rgba(93,255,176,.9)",11);
+  }
+
+  // 衛星
+  if(look){
+    const v=enu(look.az,look.el), p=project(v,B);
+    const above=look.el>0;
+    const inView=p.front && p.x>20 && p.x<W-20 && p.y>20 && p.y<H-20;
+    if(inView){
+      cx.save(); cx.translate(p.x,p.y);
+      const col=above?"#ffb13b":"rgba(255,177,59,.45)";
+      cx.strokeStyle=col; cx.fillStyle=col; cx.lineWidth=2;
+      if(!above) cx.setLineDash([3,3]);
+      const pulse=above? 18+Math.sin(t/200)*3 : 16;
+      cx.beginPath(); cx.arc(0,0,pulse,0,Math.PI*2); cx.stroke();
+      // 6U衛星アイコン（本体＋パネル）
+      cx.setLineDash([]); cx.fillRect(-5,-3.5,10,7); cx.fillRect(-15,-2,8,4); cx.fillRect(7,-2,8,4);
+      cx.font='12px "DotGothic16"'; cx.textAlign="center";
+      cx.fillText(above?S.satName.split(" ")[0]:"地平線の下",0,-pulse-6);
+      cx.restore();
+    } else {
+      // 画面外の方向を矢印で
+      let ang=Math.atan2(-p.y0, p.x0); if(!p.front && Math.hypot(p.x0,p.y0)<1e-3) ang=Math.PI/2;
+      const r=Math.min(W,H)/2-46, ax=W/2+Math.cos(ang)*r, ay=H/2+Math.sin(ang)*r;
+      cx.save(); cx.translate(ax,ay); cx.rotate(ang);
+      cx.fillStyle=above?"#ffb13b":"rgba(255,177,59,.5)";
+      cx.beginPath(); cx.moveTo(18,0); cx.lineTo(-8,-11); cx.lineTo(-3,0); cx.lineTo(-8,11); cx.closePath(); cx.fill();
+      cx.restore();
+      cx.fillStyle=cx.fillStyle; cx.font='11px "DotGothic16"'; cx.textAlign="center";
+      cx.fillText(above?"衛星はこっち":"地球の向こう側",ax,ay+28);
+    }
+  }
+
+  // デブリ
+  if(look && look.el>0){
+    const sp=project(enu(look.az,look.el),B);
+    for(const r of ROCKS){
+      const v=rockDir(r,look), p=project(v,B); if(!p.front) continue;
+      const s=(5+(1-r.p)*9)*r.sz, ang=Math.atan2(p.y-sp.y,p.x-sp.x);
+      const aimed=Math.acos(Math.max(-1,Math.min(1,dot(v,B.f))))/DEG<HIT_R();
+      cx.save(); cx.translate(p.x,p.y);
+      const g=cx.createLinearGradient(0,0,Math.cos(ang)*s*4,Math.sin(ang)*s*4);
+      g.addColorStop(0,"rgba(255,120,60,.75)"); g.addColorStop(1,"rgba(255,120,60,0)");
+      cx.strokeStyle=g; cx.lineWidth=s*0.9; cx.lineCap="round"; cx.beginPath(); cx.moveTo(0,0); cx.lineTo(Math.cos(ang)*s*4,Math.sin(ang)*s*4); cx.stroke();
+      if(aimed){ cx.strokeStyle="#ff5a5a"; cx.lineWidth=2; cx.beginPath(); cx.arc(0,0,s+8,0,Math.PI*2); cx.stroke(); }
+      cx.rotate(r.spin); cx.fillStyle="#b9693d"; cx.strokeStyle="#ffb07a"; cx.lineWidth=1;
+      cx.beginPath(); for(let k=0;k<7;k++){ const rr=s*(0.72+0.28*Math.sin(k*2.3+r.sz*5)), a=k/7*Math.PI*2; k?cx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):cx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); }
+      cx.closePath(); cx.fill(); cx.stroke(); cx.restore();
+    }
+  }
+  for(const b of booms){ const p=project(b.v,B); if(!p.front) continue; const k=1-b.t/0.6;
+    cx.save(); cx.strokeStyle=`rgba(255,210,120,${1-k})`; cx.lineWidth=3; cx.beginPath(); cx.arc(p.x,p.y,8+k*30,0,Math.PI*2); cx.stroke();
+    cx.fillStyle=`rgba(255,177,59,${1-k})`; cx.font='14px "DotGothic16"'; cx.textAlign="center"; cx.fillText("+"+b.pts,p.x,p.y-14-k*20); cx.restore(); }
+  if(shotFx>0){ cx.save(); cx.strokeStyle=`rgba(255,120,120,${shotFx/0.15})`; cx.lineWidth=3;
+    cx.beginPath(); cx.moveTo(W*0.3,H); cx.lineTo(W/2,H/2); cx.moveTo(W*0.7,H); cx.lineTo(W/2,H/2); cx.stroke(); cx.restore(); }
+  if(S.flash>0){ cx.fillStyle=`rgba(255,40,40,${S.flash*0.5})`; cx.fillRect(0,0,W,H); }
+
+  // 照準（アンテナの向き）
+  const lock=S.sig>0.6;
+  cx.save(); cx.translate(W/2,H/2); cx.strokeStyle=lock?"#5dffb0":"rgba(232,238,248,.85)"; cx.lineWidth=1.5;
+  const bw=beamWidth(), rpx=Math.tan(bw*DEG)*(H/2)/Math.tan(S.vfov*DEG/2);
+  cx.setLineDash([5,5]); cx.beginPath(); cx.arc(0,0,rpx,0,Math.PI*2); cx.stroke(); cx.setLineDash([]);
+  for(const [a,b] of [[[0,-rpx-12],[0,-rpx+6]],[[0,rpx-6],[0,rpx+12]],[[-rpx-12,0],[-rpx+6,0]],[[rpx-6,0],[rpx+12,0]]]){cx.beginPath();cx.moveTo(...a);cx.lineTo(...b);cx.stroke();}
+  cx.restore();
+}
+let stars=null;
+function drawStars(B){
+  if(!stars){ stars=[]; let s=7; const rnd=()=>((s=(s*16807)%2147483647)/2147483647);
+    for(let i=0;i<700;i++){ const z=rnd()*2-1, th=rnd()*Math.PI*2, r=Math.sqrt(1-z*z); stars.push([r*Math.cos(th),r*Math.sin(th),z,rnd()]); } }
+  for(const s of stars){ if(s[2]<0) continue; const p=project(s,B); if(!p.front||p.x<0||p.x>W||p.y<0||p.y>H) continue;
+    cx.fillStyle=`rgba(255,255,255,${0.25+s[3]*0.6})`; cx.fillRect(p.x,p.y,s[3]>0.9?2:1,s[3]>0.9?2:1); }
+  // 地面
+  const g=[]; for(let a=0;a<=360;a+=5) g.push(enu(a,0));
+  const pts=g.map(v=>project(v,B)).filter(p=>p.front);
+  if(B.f[2]<0.3){ cx.fillStyle="rgba(20,14,6,.55)"; cx.beginPath();
+    const below=project(enu(vecAz(B.f),-60),B);
+    if(pts.length>1){ cx.moveTo(pts[0].x,pts[0].y); for(const p of pts) cx.lineTo(p.x,p.y); cx.lineTo(W*3,H*3); cx.lineTo(-W*3,H*3); cx.closePath(); cx.fill(); }
+    else if(below.front){ cx.fillRect(0,0,W,H); } }
+}
+
+// ================== 受信シミュレーション ==================
+const beamWidth=()=>(S.easy?14:7)*(S.gain?0.5:1);   // 八木アンテナのビーム幅(度)のつもり
+// ================== デブリ ==================
+const ROCKS=[], booms=[]; let rockT=1.5, shotFx=0;
+function rockDir(r,look){ const cosE=Math.max(0.3,Math.cos(look.el*DEG)); return enu(look.az + r.dx*r.p/cosE, look.el + r.dy*r.p); }
+function updateRocks(dt,look){
+  if(!look || look.el<=0 || S.dead){ ROCKS.length=0; rockT=1.5; return; }
+  rockT-=dt;
+  if(rockT<=0 && ROCKS.length<3){
+    const a=Math.random()*Math.PI*2, d=10+Math.random()*6;
+    ROCKS.push({dx:Math.cos(a)*d, dy:Math.sin(a)*d, p:1, T:(S.easy?6.5:4.5)+Math.random()*2, spin:Math.random()*6, sz:0.8+Math.random()*0.6});
+    rockT=(S.easy?4:2.5)+Math.random()*2;
+  }
+  for(let i=ROCKS.length-1;i>=0;i--){ const r=ROCKS[i]; r.p-=dt/r.T; r.spin+=dt*2; if(r.p<=0.07){ ROCKS.splice(i,1); hitSat(); } }
+}
+function hitSat(){
+  if(S.dead) return;
+  S.life--; S.flash=0.6;
+  const lost=Math.floor(S.buf); S.buf=0; S.combo=1; S.lockT=0;
+  if(navigator.vibrate) try{ navigator.vibrate(200); }catch(e){}
+  if(S.life<=0){ passEnd("てんこう2 大破… ミッション終了"); S.dead=true; }
+  else toast(`デブリ衝突！ ライフ −1${lost?`<br>未保存 ${lost} 点が消えた`:""}`,1600);
+}
+const HIT_R=()=>S.easy?5:3.5;
+function shoot(){
+  if(!S.basis || !S.lastLook || S.dead) return;
+  shotFx=0.15;
+  let hit=null, best=99;
+  for(const r of ROCKS){ const e=Math.acos(Math.max(-1,Math.min(1,dot(rockDir(r,S.lastLook),S.basis.f))))/DEG; if(e<best){best=e;hit=r;} }
+  if(hit && best<HIT_R()){
+    const pts=30*(S.gain?2:1);
+    booms.push({v:rockDir(hit,S.lastLook), t:0.6, pts});
+    ROCKS.splice(ROCKS.indexOf(hit),1); S.buf+=pts;
+  }
+}
+let rxArt=null, rxCtx=$("rxCanvas").getContext("2d"), ROWS=96;
+function makeArt(){ // 日芸コンテンツの仮画像（あとで本物の作品に差し替え）
+  const c=document.createElement("canvas"); c.width=c.height=96; const g=c.getContext("2d");
+  const bg=g.createLinearGradient(0,0,0,96); bg.addColorStop(0,"#0b1d3a"); bg.addColorStop(1,"#2a1240"); g.fillStyle=bg; g.fillRect(0,0,96,96);
+  g.fillStyle="#fff"; for(let i=0;i<40;i++) g.fillRect((i*37)%96,(i*53)%60,1,1);
+  g.fillStyle="#3b7dd8"; g.beginPath(); g.arc(48,118,62,0,Math.PI*2); g.fill();
+  g.fillStyle="#5fbf6a"; g.beginPath(); g.ellipse(36,70,14,8,-.4,0,Math.PI*2); g.fill(); g.beginPath(); g.ellipse(64,64,9,6,.5,0,Math.PI*2); g.fill();
+  g.fillStyle="#d9dde5"; g.fillRect(40,22,16,11); g.fillStyle="#2b4fa8"; g.fillRect(22,25,16,5); g.fillRect(58,25,16,5);
+  g.fillStyle="#ffb13b"; g.font="9px DotGothic16"; g.textAlign="center"; g.fillText("NICHIGEI × TEN-KOH2",48,46);
+  return g.getImageData(0,0,96,96);
+}
+function receiveRow(q){
+  if(S.rows>=ROWS) return;
+  const y=S.rows, row=rxCtx.createImageData(96,1);
+  for(let x=0;x<96;x++){ const i=(y*96+x)*4, o=x*4;
+    if(Math.random()<q){ row.data[o]=rxArt.data[i]; row.data[o+1]=rxArt.data[i+1]; row.data[o+2]=rxArt.data[i+2]; }
+    else { const n=Math.random()*255; row.data[o]=n; row.data[o+1]=n; row.data[o+2]=n; }
+    row.data[o+3]=255; }
+  rxCtx.putImageData(row,0,y); S.rows++;
+}
+let bitBuf=[];
+function pushBits(q,n){
+  for(let k=0;k<n;k++){ const s=["00","01","10","11"][Math.random()*4|0]; bitBuf.push(Math.random()<q?`<b>${s}</b>`:`<i>${s}</i>`); }
+  if(bitBuf.length>40) bitBuf=bitBuf.slice(-40);
+  $("bits").innerHTML=bitBuf.join(" ");
+}
+
+// ================== 音 ==================
+let AC=null, nGain, tGain, osc;
+function initAudio(){
+  if(AC) return; AC=new (window.AudioContext||window.webkitAudioContext)();
+  const buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
+  const bp=AC.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1500; bp.Q.value=0.6;
+  nGain=AC.createGain(); nGain.gain.value=0; src.connect(bp).connect(nGain).connect(AC.destination); src.start();
+  osc=AC.createOscillator(); osc.type="sine"; osc.frequency.value=800; tGain=AC.createGain(); tGain.gain.value=0;
+  osc.connect(tGain).connect(AC.destination); osc.start();
+}
+function updateAudio(sig,dopHz,above){
+  if(!AC) return; const on=S.sound?1:0, now=AC.currentTime;
+  nGain.gain.setTargetAtTime(on*(0.05+0.18*(1-sig)),now,0.05);
+  // データ音っぽく断続させる
+  const blip=(Math.floor(performance.now()/90)%3)?1:0.4;
+  tGain.gain.setTargetAtTime(on*(above?0.16*sig*blip:0),now,0.02);
+  osc.frequency.setTargetAtTime(800+(S.easy?0:(dopHz+S.tune))/40,now,0.05);
+}
+
+// ================== メインループ ==================
+let lastT=performance.now();
+function frame(){
+  const nowW=performance.now(), dtW=Math.min(0.1,(nowW-lastT)/1000); lastT=nowW;
+  const t=simNow(), dtSim=dtW*S.speed;
+
+  // 視線
+  let B;
+  if(S.mode==="ar" && ori){ B=basisFromOri(ori); const off=(S.absSeen?0:(S.compassOff||0))+S.azOffset; B=rotZ(B,off); }
+  else B=basisFromView(S.view.az,S.view.el);
+  S.basis=B;
+
+  // 衛星
+  let look=null, dopHz=0;
+  if(S.satrec){
+    look=lookAt(t);
+    const l2=lookAt(t+1000);
+    if(look&&l2){ const rr=l2.rng-look.rng; dopHz=-rr/C_KM*F0; }
+    const stale = nowW-S.passCalcAt>30000;
+    if((S.pass && t>S.pass.los) || (!S.pass && nowW-S.passCalcAt>3000) || stale){ S.pass=findPass(t); S.passCalcAt=nowW; }
+  }
+
+  // 受信強度
+  let sig=0; S.point=0;
+  if(look && look.el>0){
+    const err=Math.acos(Math.max(-1,Math.min(1,dot(enu(look.az,look.el),B.f))))/DEG;
+    const point=Math.exp(-Math.pow(err/beamWidth(),2)); S.point=point;
+    const dist=Math.min(1,700/look.rng);                 // 遠いほど弱い
+    const horizon=Math.min(1,0.35+look.el/25);                           // 地平線付近は弱い
+    const tuneErr=S.easy?0:(S.tune+dopHz);
+    const tune=Math.exp(-Math.pow(tuneErr/1500,2));
+    sig=Math.max(0,Math.min(1,point*dist*horizon*tune*(0.9+Math.random()*0.15)));
+  }
+  S.sig=S.sig+(sig-S.sig)*Math.min(1,dtW*8);
+
+  // データ受信
+  if(look && look.el>0 && S.sig>0.15){
+    const q=Math.min(1,S.sig*1.25);
+    S.dataKB+=dtSim*9.6/8*S.sig;           // 9600bps相当
+    S.rowAcc+=dtSim*0.35*S.sig;
+    while(S.rowAcc>=1){ S.rowAcc-=1; receiveRow(q); }
+    if(Math.random()<dtW*20) pushBits(q,1);
+  }
+
+  // ===== スコア（リスクとリターン） =====
+  const above = !!(look && look.el>0);
+  const locked = above && !S.dead && S.point>0.5 && S.sig>0.08;
+  S.lastLook=look;
+  if(locked){
+    S.lockT+=dtW; S.lostT=0;
+    S.combo=Math.min(5,1+Math.floor(S.lockT/3)*0.5);          // 3秒ごとに+0.5、最大×5
+    S.elB = look.el<20?2:(look.el<40?1.5:1);                   // 低い衛星ほど難しい→高得点
+    S.buf+=dtW*10*Math.max(0.3,S.sig)*S.combo*S.elB*(S.gain?2:1);
+  } else {
+    S.elB=1;
+    if(S.buf>0 || S.lockT>0){ S.lostT+=dtW; if(S.lostT>0.7) bust(); }
+  }
+  updateRocks(dtW,look);
+  S.flash=Math.max(0,S.flash-dtW); shotFx=Math.max(0,shotFx-dtW);
+  for(let i=booms.length-1;i>=0;i--){ booms[i].t-=dtW; if(booms[i].t<=0) booms.splice(i,1); }
+  if(S.wasAbove && !above) passEnd();
+  S.wasAbove=above;
+
+  drawSky(B,look,nowW);
+  updateHUD(look,dopHz,t);
+  updateAudio(S.sig,dopHz,look&&look.el>0);
+  requestAnimationFrame(frame);
+}
+
+function fmtDur(ms){ ms=Math.max(0,ms); const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60;
+  return h?`${h}時間${m}分`:(m?`${m}分${String(ss).padStart(2,"0")}秒`:`${ss}秒`); }
+function updateHUD(look,dopHz,t){
+  $("clock").textContent=new Date(t).toLocaleTimeString("ja-JP")+(S.speed!==1||Math.abs(t-Date.now())>5000?" *":"");
+  if(!look){ $("status").textContent="計算できません"; return; }
+  $("az").textContent=look.az.toFixed(0)+"°"; $("el").textContent=look.el.toFixed(0)+"°";
+  $("rng").textContent=Math.round(look.rng).toLocaleString()+" km";
+  $("dop").textContent=(look.el>0?(dopHz>=0?"+":"")+(dopHz/1000).toFixed(1)+" kHz":"—");
+  const st=$("status");
+  if(look.el>0){ st.textContent=S.sig>0.6?"受信中！":"上空にいる"; st.style.color=S.sig>0.6?"var(--lock)":"var(--accent)"; }
+  else if(S.pass){ st.textContent="次のパスまで "+fmtDur(S.pass.aos-t); st.style.color="var(--dim)"; }
+  else { st.textContent="地平線の下"; st.style.color="var(--dim)"; }
+  $("meterFill").style.width=(S.sig*100).toFixed(0)+"%";
+  $("sig").textContent=(S.sig*100).toFixed(0)+"%";
+  $("data").textContent=S.dataKB.toFixed(1)+" KB";
+  $("rxLabel").textContent="受信画像 "+Math.round(S.rows/ROWS*100)+"%";
+  $("life").textContent=S.dead?"大破":"♥".repeat(Math.max(0,S.life))+"♡".repeat(Math.max(0,3-S.life));
+  $("score").textContent=S.score.toLocaleString();
+  $("mult").textContent="×"+(S.combo*S.elB*(S.gain?2:1)).toFixed(1);
+  const bf=$("buf"); bf.textContent=Math.floor(S.buf).toLocaleString(); bf.style.color=S.lostT>0.05?"var(--warn)":"var(--accent)";
+  $("bBank").disabled=S.buf<1;
+  if(!S.easy){ const e=(S.tune+dopHz)/1000; $("fShow").textContent=(e>=0?"ずれ +":"ずれ ")+e.toFixed(1)+" kHz"; $("fShow").style.color=Math.abs(e)<1.5?"var(--lock)":"var(--warn)"; }
+}
+
+// ================== 入力 ==================
+function toast(t,ms){ const m=$("msg"); m.innerHTML=t; m.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(()=>m.style.display="none",ms||2200); }
+
+let drag=null;
+cv.addEventListener("pointerdown",e=>{ if(S.mode!=="pc"){ shoot(); return; } drag={x:e.clientX,y:e.clientY,az:S.view.az,el:S.view.el}; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove",e=>{ if(!drag) return; const k=S.vfov/H;
+  S.view.az=(drag.az-(e.clientX-drag.x)*k+360)%360; S.view.el=Math.max(-30,Math.min(89,drag.el+(e.clientY-drag.y)*k)); });
+cv.addEventListener("pointerup",e=>{ if(drag && Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6) shoot(); drag=null; });
+addEventListener("wheel",e=>{ if(S.mode!=="pc") return; S.vfov=Math.max(20,Math.min(100,S.vfov+e.deltaY*0.03)); $("fov").value=S.vfov; $("fovV").textContent=Math.round(S.vfov)+"°"; },{passive:true});
+addEventListener("keydown",e=>{ if(S.mode!=="pc") return; const st=2;
+  if(e.key==="ArrowLeft") S.view.az=(S.view.az-st+360)%360; if(e.key==="ArrowRight") S.view.az=(S.view.az+st)%360;
+  if(e.key==="ArrowUp") S.view.el=Math.min(89,S.view.el+st); if(e.key==="ArrowDown") S.view.el=Math.max(-30,S.view.el-st);
+  if(!S.easy&&(e.key==="+"||e.key==="=")) S.tune+=250; if(!S.easy&&e.key==="-") S.tune-=250; });
+
+function bust(){
+  const lost = S.easy ? Math.floor(S.buf/2) : Math.floor(S.buf);   // かんたんは半分だけ失う
+  if(S.buf>=1) toast(`電波ロスト！<br>未保存 ${lost} 点が消えた`,1600);
+  S.score += Math.floor(S.buf) - lost; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0;
+}
+function bank(){
+  if(S.buf<1) return; const g=Math.floor(S.buf);
+  S.score+=g; S.buf=0; S.combo=1; S.lockT=0; toast(`+${g} 点 保存！`,1000);
+}
+function passEnd(title){
+  if(S.dead) return;
+  if(S.buf>0) bust();
+  let best=0; try{ best=+localStorage.getItem("tk2best")||0; }catch(e){}
+  const nb=S.score>best; if(nb){ try{ localStorage.setItem("tk2best",S.score); }catch(e){} best=S.score; }
+  setTimeout(()=>toast(`${title||"パス終了"}<br>スコア ${S.score.toLocaleString()} 点<br>${nb?"★ 自己ベスト更新！":"ベスト "+best.toLocaleString()+" 点"}`,4000),1700);
+}
+$("bBank").onclick=bank;
+$("bGain").onclick=()=>{ S.gain=!S.gain; $("bGain").textContent=S.gain?"高利得 ON":"高利得 OFF"; $("bGain").classList.toggle("on",S.gain);
+  toast(S.gain?"高利得アンテナ：点数×2<br>でも照準が半分に狭くなる":"通常アンテナ",1800); };
+addEventListener("keydown",e=>{ if(e.code==="Space"){ e.preventDefault(); bank(); } if(e.key==="g"||e.key==="G") $("bGain").onclick(); if(e.key==="f"||e.key==="F") shoot(); });
+$("bShoot").onclick=shoot;
+function resetRx(){ S.life=3; S.dead=false; ROCKS.length=0; booms.length=0; S.score=0; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0; S.dataKB=0; S.rows=0; S.rowAcc=0; rxCtx.fillStyle="#000"; rxCtx.fillRect(0,0,96,96); bitBuf=[]; $("bits").innerHTML=""; }
+$("bNow").onclick=()=>{ setSim(Date.now(),1); $("bSpeed").textContent="×1"; S.pass=null; };
+$("bNext").onclick=()=>{
+  const t=simNow(), cur=lookAt(t);
+  const p = (cur&&cur.el>0) ? findPass(S.pass?S.pass.los+60e3:t+60e3) : findPass(t);
+  if(!p){ toast("2日以内にパスがありません"); return; }
+  setSim(p.aos-20e3, Math.max(S.speed,10)); $("bSpeed").textContent="×"+S.speed; S.pass=p; resetRx();
+  toast(`パス再現：${new Date(p.aos).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}<br>最大仰角 ${p.max.el.toFixed(0)}°・方位 ${p.pts[0].az.toFixed(0)}° から出現`,3000);
+};
+$("bSpeed").onclick=()=>{ const sp=[1,10,30,60]; const n=sp[(sp.indexOf(S.speed)+1)%sp.length]; setSim(simNow(),n); $("bSpeed").textContent="×"+n; };
+$("bSound").onclick=()=>{ initAudio(); AC.resume&&AC.resume(); S.sound=!S.sound; $("bSound").textContent=S.sound?"音 ON":"音 OFF"; $("bSound").classList.toggle("on",S.sound); };
+$("bSet").onclick=()=>{ const s=$("settings"); s.style.display=s.style.display==="block"?"none":"block"; };
+$("bClose").onclick=()=>$("settings").style.display="none";
+$("bMode").onclick=()=>{ S.easy=!S.easy; $("bMode").textContent=S.easy?"かんたん":"無線家モード"; $("bMode").classList.toggle("on",!S.easy); $("tune").style.display=S.easy?"none":"flex"; S.tune=0;
+  toast(S.easy?"かんたんモード：周波数は自動で合います":"無線家モード：ドップラーで周波数がずれます。<br>左のボタンで合わせ続けよう",2600); };
+const hold=(el,fn)=>{ let h; const go=()=>{fn(); h=setTimeout(go,80);}; el.onpointerdown=e=>{e.preventDefault(); go();}; el.onpointerup=el.onpointerleave=()=>clearTimeout(h); };
+hold($("fUp"),()=>S.tune+=150); hold($("fDn"),()=>S.tune-=150);
+$("off").oninput=e=>{ S.azOffset=+e.target.value; $("offV").textContent=S.azOffset+"°"; };
+$("fov").oninput=e=>{ S.vfov=+e.target.value; $("fovV").textContent=S.vfov+"°"; };
+$("bApply").onclick=()=>{ try{ loadTLE($("tle").value.split("\n")); resetRx(); toast("軌道データを反映しました"); }catch(err){ toast("読み込めませんでした：<br>"+err.message,3000); } };
+$("bFake").onclick=()=>{ loadTLE(FAKE_TLE); resetRx(); toast("架空データに戻しました"); };
+$("bISS").onclick=async()=>{
+  try{ const r=await fetch("https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE"); if(!r.ok) throw new Error(r.status);
+    const txt=await r.text(); loadTLE(txt.split("\n")); setSim(Date.now(),1); resetRx(); toast("本物のISSを読み込みました"); }
+  catch(err){ toast("取得できませんでした（"+err.message+"）<br>TLEを直接貼り付けてください",3200); }
+};
+$("bLoc").onclick=()=>{
+  if(!navigator.geolocation){ toast("位置情報が使えません"); return; }
+  navigator.geolocation.getCurrentPosition(p=>{ S.obs={lat:p.coords.latitude,lon:p.coords.longitude,h:(p.coords.altitude||0)/1000,name:"現在地"}; S.pass=null; showLoc(); toast("現在地に切り替えました"); },
+    ()=>toast("位置情報を取得できませんでした"),{enableHighAccuracy:true,timeout:8000});
+};
+function showLoc(){ $("locLabel").textContent=`観測地点：${S.obs.name}（${S.obs.lat.toFixed(3)}, ${S.obs.lon.toFixed(3)}）`; }
+
+async function startAR(){
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined" && DeviceOrientationEvent.requestPermission){
+      const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") throw new Error("センサーの許可がありません");
+    }
+    addEventListener("deviceorientationabsolute",e=>onOrientation(e,true));
+    addEventListener("deviceorientation",e=>onOrientation(e,false));
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+    const v=$("video"); v.srcObject=stream; v.style.display="block"; await v.play().catch(()=>{});
+    S.mode="ar"; $("start").style.display="none"; begin();
+    setTimeout(()=>{ if(!ori) toast("傾きセンサーが反応しません。<br>PCで試すモードを使ってください",3500); },2500);
+  }catch(err){
+    toast("カメラ/センサーを使えませんでした<br>("+err.message+")<br>HTTPSのページで開いてください",4000);
+  }
+}
+function startPC(){ S.mode="pc"; $("start").style.display="none"; begin(); toast("ドラッグ／矢印キーで見回せます<br>「次のパス」で衛星が来る時刻へ",3000); }
+$("bStartAR").onclick=startAR; $("bStartPC").onclick=startPC;
+
+let begun=false;
+function begin(){
+  if(begun) return; begun=true;
+  rxArt=makeArt(); resetRx(); showLoc();
+  try{ loadTLE(FAKE_TLE); }catch(e){ toast(e.message); }
+  // PCモードは次のパスが出る方向を向いておく
+  const p=findPass(simNow()); if(p && S.mode==="pc"){ S.view.az=p.max.az; S.view.el=Math.min(45,p.max.el*0.6); }
+  requestAnimationFrame(frame);
+}
+if(typeof satellite==="undefined"){ document.querySelector("#start p").innerHTML+="<br><br><b style='color:#ff5a5a'>軌道計算ライブラリを読み込めませんでした。ネット接続を確認してください。</b>"; }
+</script>
+</body>
+</html>
