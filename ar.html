@@ -84,6 +84,15 @@ body.detail #gear{bottom:calc(env(safe-area-inset-bottom) + 186px)}
 .steps div{display:flex;gap:12px;align-items:center;font-family:var(--dot);font-size:15px;line-height:1.45}
 .steps i{font-style:normal;flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
 #start .note{font-size:10px}
+#bigScore{display:inline-block}
+#bigScore.bump{animation:bump .45s}
+@keyframes bump{40%{transform:scale(1.35);color:var(--accent)}}
+#bigBank small{display:block;font-size:11px;font-family:var(--mono);opacity:.75;margin-top:3px}
+#bigBank.hint{animation:hop .5s infinite alternate}
+@keyframes hop{to{transform:translateX(-50%) translateY(-8px)}}
+.fly{position:fixed;transform:translate(-50%,-50%);font-family:var(--num);font-size:32px;z-index:12;pointer-events:none;transition:all .65s cubic-bezier(.5,0,.3,1);text-shadow:0 2px 10px rgba(0,0,0,.7);white-space:nowrap}
+.fly.ok{color:var(--accent)}
+.fly.ng{color:#ff5a5a;font-family:var(--dot);font-size:22px}
 </style>
 </head>
 <body>
@@ -135,14 +144,14 @@ body.detail #gear{bottom:calc(env(safe-area-inset-bottom) + 186px)}
   <div class="steps">
     <div><i>📡</i><span>空を飛ぶ「てんこう2」を<br>まんなかの円に入れて電波を受信</span></div>
     <div><i>☄️</i><span>飛んでくるデブリは<br>画面タップで撃ち落とせ</span></div>
-    <div><i>💾</i><span>たまった点は「保存」で確定。<br>電波が切れると消えちゃう！</span></div>
+    <div><i>💾</i><span>たまった点は「セーブ」で確定！<br>セーブ前に電波が切れたり<br>デブリに当たると消えちゃう</span></div>
   </div>
   <p class="note">※架空の軌道データ（ISS相当）で動いています</p>
   <button class="primary" id="bStartAR">スマホでスタート</button>
   <button id="bStartPC">PCであそぶ</button>
 </div>
 <div id="top" class="panel"><div class="r"><span id="hearts">♥♥♥</span><span id="bigScore"><small>SCORE</small><span id="bsN">0</span></span></div><div id="coach">—</div></div>
-<button id="bigBank" disabled>受信して点をためよう</button>
+<button id="bigBank" disabled>電波を受信すると点がたまる</button>
 <button id="gear" title="詳細表示">⚙</button>
 <div id="result"><h2 id="rTitle">パス終了！</h2><div id="rScore">0</div><div id="rBest"></div><canvas id="rImg" width="96" height="96"></canvas><div id="rLearn"></div><button id="rAgain">もう一度あそぶ</button></div>
 <div id="msg"></div>
@@ -416,7 +425,7 @@ function hitSat(){
   const lost=Math.floor(S.buf); S.buf=0; S.combo=1; S.lockT=0;
   if(navigator.vibrate) try{ navigator.vibrate(200); }catch(e){}
   if(S.life<=0){ passEnd("てんこう2 大破… ミッション終了"); S.dead=true; }
-  else toast(`デブリ衝突！ ライフ −1${lost?`<br>未保存 ${lost} 点が消えた`:""}`,1600);
+  else { toast("デブリ衝突！ ライフ −1",1400); if(lost) flyText("−"+lost+" 消えた…","ng"); }
 }
 const HIT_R=()=>S.easy?5:3.5;
 function shoot(){
@@ -569,14 +578,20 @@ function updateHUD(look,dopHz,t){
   $("bBank").disabled=S.buf<1;
   // シンプル表示
   $("hearts").textContent=S.dead?"💥":"♥".repeat(Math.max(0,S.life))+"♡".repeat(Math.max(0,3-S.life));
-  $("bsN").textContent=S.score.toLocaleString();
+  $("bsN").textContent=(S.flying?S.shown:S.score).toLocaleString();
   const bb=$("bigBank"), bn=Math.floor(S.buf);
-  bb.disabled=bn<1; const bt=bn<1?"受信して点をためよう":`保存する ＋${bn.toLocaleString()}`; if(bb.textContent!==bt) bb.textContent=bt;
+  if(bn>=20 && !S.hinted){ S.hinted=true; S.hintT=performance.now(); }
+  const hinting = S.hintT && performance.now()-S.hintT<4000 && bn>=1;
+  bb.disabled=bn<1;
+  const bt=bn<1?"電波を受信すると点がたまる":`💾 セーブ ＋${bn.toLocaleString()}<small>セーブ前の点は、電波が切れると消える</small>`;
+  if(bb.innerHTML!==bt) bb.innerHTML=bt;
+  bb.classList.toggle("hint", !!hinting);
   bb.classList.toggle("danger", bn>=1 && (S.lostT>0.05 || ROCKS.some(r=>r.p<0.35)));
   const c=$("coach"); let txt, col;
   if(look.el<=0){ txt=S.pass?"てんこう2がもうすぐ来る！ 矢印の方へ":"てんこう2は地球の向こう側…"; col="var(--accent)"; }
   else if(ROCKS.some(r=>r.p<0.5)){ txt="デブリ接近！ タップで撃て"; col="#ff5a5a"; }
-  else if(S.point>0.5){ txt=S.combo>=2.5?"いいぞ！ 消える前に保存！":"受信中！ そのまま追いかけて"; col="var(--lock)"; }
+  else if(hinting){ txt="↓ 点がたまった！ セーブしないと消えるよ"; col="var(--accent)"; }
+  else if(S.point>0.5){ txt=bn>=150?"たくさんたまった！ そろそろセーブ？":(S.combo>=2.5?"倍率アップ中！ 追いかけ続けろ":"受信中！ そのまま追いかけて"); col="var(--lock)"; }
   else { txt="てんこう2を まんなかの円に入れよう"; col="var(--text)"; }
   if(c.textContent!==txt) c.textContent=txt; c.style.color=col;
   if(!S.easy){ const e=(S.tune+dopHz)/1000; $("fShow").textContent=(e>=0?"ずれ +":"ずれ ")+e.toFixed(1)+" kHz"; $("fShow").style.color=Math.abs(e)<1.5?"var(--lock)":"var(--warn)"; }
@@ -598,12 +613,22 @@ addEventListener("keydown",e=>{ if(S.mode!=="pc") return; const st=2;
 
 function bust(){
   const lost = S.easy ? Math.floor(S.buf/2) : Math.floor(S.buf);   // かんたんは半分だけ失う
-  if(S.buf>=1) toast(`電波ロスト！<br>未保存 ${lost} 点が消えた`,1600);
+  if(S.buf>=1){ toast("電波ロスト！",1200); if(lost) flyText("−"+lost+" 消えた…","ng"); }
   S.score += Math.floor(S.buf) - lost; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0;
+}
+function flyText(text,cls){
+  const bb=$("bigBank").getBoundingClientRect(), sc=$("bsN").getBoundingClientRect();
+  const el=document.createElement("div"); el.className="fly "+cls; el.textContent=text;
+  el.style.left=(bb.left+bb.width/2)+"px"; el.style.top=(bb.top+bb.height/2)+"px"; document.body.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(cls==="ok"){ el.style.left=(sc.left+sc.width/2)+"px"; el.style.top=(sc.top+sc.height/2)+"px"; el.style.transform="translate(-50%,-50%) scale(.6)"; el.style.opacity=".3"; }
+    else { el.style.top=(bb.top-60)+"px"; el.style.opacity="0"; el.style.transform="translate(-50%,-50%) rotate(-8deg)"; }
+  }));
+  setTimeout(()=>{ el.remove(); if(cls==="ok"){ S.flying=false; const s=$("bigScore"); s.classList.remove("bump"); void s.offsetWidth; s.classList.add("bump"); } },700);
 }
 function bank(){
   if(S.buf<1) return; const g=Math.floor(S.buf);
-  S.score+=g; S.buf=0; S.combo=1; S.lockT=0; toast(`+${g} 点 保存！`,1000);
+  S.shown=S.score; S.flying=true; S.score+=g; S.buf=0; S.combo=1; S.lockT=0; flyText("+"+g.toLocaleString(),"ok");
 }
 function passEnd(title){
   if(S.dead) return;
@@ -644,7 +669,7 @@ function goGoodPass(){
   if(S.mode==="pc"){ S.view.az=p.pts[0].az; S.view.el=10; }
 }
 $("rAgain").onclick=()=>{ $("result").style.display="none"; goGoodPass(); };
-function resetRx(){ S.life=3; S.dead=false; ROCKS.length=0; booms.length=0; S.score=0; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0; S.dataKB=0; S.rows=0; S.rowAcc=0; rxCtx.fillStyle="#000"; rxCtx.fillRect(0,0,96,96); bitBuf=[]; $("bits").innerHTML=""; }
+function resetRx(){ S.hinted=false; S.hintT=0; S.life=3; S.dead=false; ROCKS.length=0; booms.length=0; S.score=0; S.buf=0; S.combo=1; S.lockT=0; S.lostT=0; S.dataKB=0; S.rows=0; S.rowAcc=0; rxCtx.fillStyle="#000"; rxCtx.fillRect(0,0,96,96); bitBuf=[]; $("bits").innerHTML=""; }
 $("bNow").onclick=()=>{ setSim(Date.now(),1); $("bSpeed").textContent="×1"; S.pass=null; };
 $("bNext").onclick=()=>{
   const t=simNow(), cur=lookAt(t);
