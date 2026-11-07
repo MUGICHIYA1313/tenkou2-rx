@@ -94,8 +94,8 @@ button:active{transform:translate(2px,2px)}
   <h1 aria-label="てんこう2 パケットキャッチ"><span id="titleTxt"><span>てんこう2</span><br>パケットキャッチ</span><canvas id="titleCv" style="display:none"></canvas></h1>
   <div class="steps">
     <div><i>🛰</i><span><b style="color:var(--accent)">本物のてんこう2の軌道</b>で<br>相模原の空を通るパスを再現！</span></div>
-    <div><i>📷</i><span>パケットを集めて<b style="color:var(--pkt)">日芸8学科の絵</b><br>（カメラ・マイク・パレット…）を完成！</span></div>
-    <div><i>🏆</i><span>8枚そろえて地球に帰りつつ、<br><b style="color:var(--accent)">ハイスコア</b>をねらえ！</span></div>
+    <div><i>📷</i><span>高解像度カメラの<b style="color:var(--pkt)">観測写真パケット</b>を<br>集めて、地球の8か所の写真を完成！</span></div>
+    <div><i>🏆</i><span>8枚そろえてミッション完了しつつ、<br><b style="color:var(--accent)">ハイスコア</b>をねらえ！</span></div>
     <div><i>⚠️</i><span><b style="color:#b8c0d8">デブリ</b> −1　<b style="color:#ff9a3d">隕石</b> −2　<b style="color:var(--ok)">宇宙人</b> −3<br><b style="color:#ff6f8a">ハートの電波</b>でライフ回復</span></div>
   </div>
   <div id="live">本物のてんこう2を計算中…</div>
@@ -121,7 +121,7 @@ button:active{transform:translate(2px,2px)}
 // ================== 調整用の数値 ==================
 const STAGE_SEC = 40;       // 1ステージの制限時間（秒）
 const RUN_SEC = STAGE_SEC*8; // 衛星のパスを割り当てる全体の長さ
-const GRID = 3;             // 各学科の絵のピース 3×3=9
+const GRID = 3;             // 観測写真のピース 3×3=9
 const ALIEN_R = 5;          // 宇宙人の当たり判定（度）
 const CATCH_R = 5.5;          // キャッチ判定（度）
 const ROCK_R = 4.5;         // デブリ当たり判定（度）
@@ -135,20 +135,20 @@ let TLE=["TEN-KOH 2",
 let TLE_NOTE="2026年11月5日の軌道データ";
 const OBS={lat:35.5582, lon:139.3956, h:0.15};   // JAXA相模原キャンパス
 const TYPES=[
- {k:"art",   icon:"🎨", rgb:"79,232,255",  name:"学科の絵",   bits:"00", f:523, w:.5},
- {k:"photo", icon:"📷", rgb:"255,216,79",  name:"地球の写真",   bits:"01", f:659, w:.2},
+ {k:"art",   icon:"📷", rgb:"79,232,255",  name:"観測写真",     bits:"00", f:523, w:.5},
+ {k:"photo", icon:"🧪", rgb:"255,216,79",  name:"材料データ",   bits:"01", f:659, w:.2},
  {k:"rad",   icon:"☢️", rgb:"197,140,255", name:"放射線データ", bits:"10", f:784, w:.15},
  {k:"radio", icon:"📻", rgb:"125,255,138", name:"無線家の声",   bits:"11", f:988, w:.15}];
 const HEAL={k:"heal", icon:"💗", rgb:"255,111,138", name:"ライフ回復", bits:"♥", f:1175, w:0};
-const DEPTS=[
- {name:"写真学科",     c:["#ffe08a","#e29a2a","#5a2a12"], icon:"camera"},
- {name:"映画学科",     c:["#ff9a9a","#d43a4a","#4a1220"], icon:"film"},
- {name:"美術学科",     c:["#ffb3e0","#d45aa8","#4a1a56"], icon:"brush"},
- {name:"音楽学科",     c:["#9ff0ff","#3a8fd0","#142a5e"], icon:"note"},
- {name:"文芸学科",     c:["#eeeef8","#9a9ab8","#3a3a5a"], icon:"book"},
- {name:"演劇学科",     c:["#d6a8ff","#7a3ad0","#26124e"], icon:"mask"},
- {name:"放送学科",     c:["#ffc27a","#e2553a","#5a1622"], icon:"mic"},
- {name:"デザイン学科", c:["#c9ff9a","#5fbf6a","#1e5232"], icon:"palette"}];
+const TARGETS=[
+ {name:"富士山",       area:"日本"},
+ {name:"台湾",         area:"台湾・成功大学のふるさと"},
+ {name:"台風",         area:"太平洋"},
+ {name:"サハラ砂漠",   area:"アフリカ"},
+ {name:"アマゾン川",   area:"南アメリカ"},
+ {name:"ヒマラヤ山脈", area:"アジア"},
+ {name:"南極の氷",     area:"南極"},
+ {name:"夜の日本",     area:"都市の明かり"}];
 const COUNTRIES=["🇺🇸 アメリカ","🇬🇧 イギリス","🇧🇷 ブラジル","🇦🇺 オーストラリア","🇹🇼 台湾","🇩🇪 ドイツ","🇮🇳 インド","🇿🇦 南アフリカ","🇨🇦 カナダ","🇫🇷 フランス","🇰🇷 韓国","🇦🇷 アルゼンチン"];
 
 // ================== 共通 ==================
@@ -324,8 +324,8 @@ const UFO=[0,1].map(b=>sprite([
  "..g...g...g..."],{a:"#7dff8a",A:"#c6ffcc",e:"#040a1e",k:"#4a2280",m:"#9a5ad8",L:b?"#ffd84f":"#ff6fb5",g:b?"#ff6fb5":"#ffd84f"}));
 const GLYPH={
  heal: [".#...#.","#.#.#.#",".......",".##.##.","#######",".#####.","..###.."],
- art:  ["..###..",".#####.","##.####","#######","###..##",".####..","..##..."],
- photo:["..##...","#######","##...##","#..#..#","##...##","#######","......."],
+ art:  ["..##...","#######","##...##","#..#..#","##...##","#######","......."],
+ photo:["..###..","...#...","..#.#..",".#...#.","#.###.#","#######",".#####."],
  rad:  ["...#...","..###..",".#.#.#.","###.###",".......",".#####.","..###.."],
  radio:["#.....#",".#...#.","#.#.#.#","...#...","..###..",".#.#.#.","#..#..#"]};
 function packetSprite(T){ const rows=[];
@@ -383,38 +383,51 @@ function drawWorld(B,now){
     if(hp.length>1){ hp.sort((a,b)=>a.x-b.x); px.fillStyle="#020713"; px.beginPath(); px.moveTo(-W,hp[0].y); for(const q of hp) px.lineTo(q.x,q.y); px.lineTo(W*2,hp[hp.length-1].y); px.lineTo(W*2,H*3); px.lineTo(-W,H*3); px.closePath(); px.fill(); }
     else if(B.f[2]<-.3){ px.fillStyle="#020713"; px.fillRect(0,0,W,H); }
   }
-  // いまの学科の星
-  if(G && G.state!=="count"){ const D=DEPTS[Math.min(G.stage,7)], v=enu(G.startAz+38,30), q=project(v,B);
-    if(q.front&&q.x>-150&&q.x<W+150&&q.y>-150&&q.y<H+150){ px.globalAlpha=.6; blit(D.spr,q.x,q.y,2); px.globalAlpha=1; label(D.name+"の星",q.x,q.y+(D.spr.height*P)+14,"#c8d8f4",14); } }
   // 地平線
   for(const [c,w] of [["#2f6fe0",P*3],["#eaf2ff",P]]){ px.strokeStyle=c; px.lineWidth=w; px.beginPath(); let pen=false;
     for(let a=0;a<=360;a+=3){ const q=project(enu(a,0),B); if(q.front&&Math.abs(q.x)<W*3){ pen?px.lineTo(q.x,q.y):px.moveTo(q.x,q.y); pen=true; } else pen=false; } px.stroke(); }
 }
 
-// ================== 各学科の絵（art1.png〜art8.png を置くと差し替わる） ==================
-const ICONS={
- camera:["............","...####.....",".##########.",".#........#.",".#..####..#.",".#.#....#.#.",".#.#....#.#.",".#..####..#.",".#........#.",".##########.","............","............"],
- film:  ["............",".#.#.#.#.#..","..#.#.#.#.#.",".##########.",".##########.",".#........#.",".#..#..#..#.",".#........#.",".#........#.",".##########.","............","............"],
- palette:["............","....#####...","..##.....##.",".#..#..#...#",".#.........#",".#..#....##.",".#.......#..","..#..#...#..","...#.....##.","....######..","............","............"],
- note:  ["............","......######","......######","......#....#","......#....#","......#....#","......#....#","...####.####","..#####.####","..####..###.","............","............"],
- book:  ["............",".####..####.","#....##....#","#.##.##.##.#","#....##....#","#.##.##.##.#","#....##....#","#.##.##.##.#","#....##....#",".####..####.","............","............"],
- mask:  ["............","..########..",".#........#.",".#.##..##.#.",".#........#.",".#........#.",".#..#..#..#.","..#..##..#..","...#....#...","....####....","............","............"],
- mic:   ["....####....","...#....#...","...#.##.#...","...#....#...","...#.##.#...",".#..####..#.",".#........#.","..#......#..","...######...",".....##.....","...######...","............"],
- brush: ["..........##",".........###","........###.",".......###..","......###...",".....###....","....##......","...####.....","..#####.....",".#####......",".####.......","..##........"],
- pencil:["..........#.",".........###","........###.",".......###..","......###...",".....###....","....###.....","...###......","..###.......","..##........",".#..........","............"]};
-const arts=DEPTS.map((D,i)=>{
+// ================== 観測写真（art1.png〜art8.png を置くと本物の衛星写真に差し替わる） ==================
+const hash=(x,y,s)=>{ const v=Math.sin(x*12.9898+y*78.233+s*37.719)*43758.5453; return v-Math.floor(v); };
+function vnoise(x,y,s){ const xi=Math.floor(x), yi=Math.floor(y), fx=x-xi, fy=y-yi, sm=t=>t*t*(3-2*t);
+  const a=hash(xi,yi,s), b=hash(xi+1,yi,s), c=hash(xi,yi+1,s), d=hash(xi+1,yi+1,s);
+  return a+(b-a)*sm(fx)+(c-a)*sm(fy)+(a-b-c+d)*sm(fx)*sm(fy); }
+const fbm=(x,y,s)=>vnoise(x/6,y/6,s)*.55+vnoise(x/3,y/3,s+1)*.3+vnoise(x/1.5,y/1.5,s+2)*.15;
+const SEA=["#0b2a6e","#123c8c","#1a4fa8"], FOREST=["#1e5a2a","#2a7a34","#3f9a42"];
+const pick=(arr,v)=>arr[Math.max(0,Math.min(arr.length-1,Math.floor(v*arr.length)))];
+const PAINT=[
+  // 富士山：海と陸、雪をかぶった円すいの山
+  (x,y)=>{ const n=fbm(x,y,1), sea=(y>21+Math.sin(x*.3)*2+n*3)&&x<20; if(sea) return pick(SEA,n);
+    const d=Math.hypot(x-17,y-13); if(d<3+n*1.5) return n>.5?"#ffffff":"#e6eef8"; if(d<5) return (x+y)%3?"#cfd6e4":"#8a8a9a";
+    if(d<9) return pick(["#5a4a3a","#6e5a42","#7a6a4a"],n); if(Math.hypot(x-25,y-22)<2.5) return "#1a4fa8"; return pick(FOREST,n); },
+  // 台湾：海にうかぶ島、中央に山脈、雲
+  (x,y)=>{ const n=fbm(x,y,2), u=(x-16)*.94-(y-16)*.34, v=(x-16)*.34+(y-16)*.94, isl=(u/5.5)**2+(v/12.5)**2<1-(n-.5)*.5;
+    if(fbm(x+40,y,9)>.68) return "#f4f6fb"; if(!isl) return pick(SEA,n); if(Math.abs(u-.8)<1.6+n) return n>.55?"#7a6a4a":"#4a6a3a"; return pick(FOREST,n); },
+  // 台風：うずまく雲と目
+  (x,y)=>{ const dx=x-16, dy=y-16, r=Math.hypot(dx,dy), t=Math.atan2(dy,dx), n=fbm(x,y,3);
+    if(r<1.6) return "#0b2a6e"; const arm=Math.sin(t*2-r*.55+n*2); if(r<14&&arm>-.2+r*.03) return arm>.5?"#ffffff":"#c8d4e8"; return pick(SEA,n); },
+  // サハラ砂漠：砂丘のしま模様
+  (x,y)=>{ const n=fbm(x,y,4), s=Math.sin(x*.7+y*.35+n*4); return s>.6?"#f0c878":s>-.1?"#d8a050":s>-.7?"#b87a38":"#8a5a2a"; },
+  // アマゾン川：森を蛇行する川
+  (x,y)=>{ const n=fbm(x,y,5), cx=16+6*Math.sin(y*.32)+2*Math.sin(y*.9), d=Math.abs(x-cx), tri=Math.abs(y-(10+(x-4)*.4))<.8&&x<cx&&x>3;
+    if(d<1.4||tri) return d<.7?"#5a7aa8":"#8a7a4a"; if(fbm(x+20,y,11)>.72) return "#e8eef6"; return pick(FOREST,n); },
+  // ヒマラヤ山脈：雪の尾根
+  (x,y)=>{ const n=fbm(x,y,6), hgt=Math.sin(x*.45+y*.2)+Math.sin(x*.18-y*.55)+n*1.6-y*.03;
+    return hgt>1.3?"#ffffff":hgt>.8?"#d8e2f0":hgt>.2?"#8a8a9a":hgt>-.4?"#6e5a42":"#4a6a3a"; },
+  // 南極の氷：白い氷原と割れ目、海
+  (x,y)=>{ const n=fbm(x,y,7); if(x+y*.6>36+n*4) return pick(SEA,n*.6); if(Math.abs(Math.sin(x*.32+y*.85+n*3))<.07) return "#3a6aa8";
+    return n>.6?"#ffffff":n>.4?"#e6f0fa":"#c8daf0"; },
+  // 夜の日本：暗い陸地に街の明かり
+  (x,y)=>{ const n=fbm(x,y,8), v=y-(26-x*.75-Math.sin(x*.4)*2), land=Math.abs(v)<3.2+n*2.2;
+    if(!land) return hash(x,y,3)>.985?"#2a3a6a":"#040a24"; const big=Math.hypot(x-19,y-13)<2.2||Math.hypot(x-13,y-17)<1.6;
+    if(big) return hash(x,y,4)>.3?"#ffe27a":"#ffb13b"; return hash(x,y,5)>.8?"#ffcf5a":hash(x,y,6)>.7?"#a87a2a":"#101a3a"; }];
+const arts=TARGETS.map((D,i)=>{
   const c=document.createElement("canvas"); c.width=c.height=96; const ag=c.getContext("2d");
   const s=document.createElement("canvas"); s.width=s.height=32; const g=s.getContext("2d");
-  const gr=g.createLinearGradient(0,0,0,32); gr.addColorStop(0,"#020616"); gr.addColorStop(.75,D.c[2]); gr.addColorStop(1,D.c[1]); g.fillStyle=gr; g.fillRect(0,0,32,32);
-  [[3,3],[9,6],[27,4],[22,9],[5,13],[14,2],[29,15],[2,22],[28,24]].forEach(([x,y],k)=>{ g.fillStyle=["#fff","#9ff0ff","#ffb3e0","#fff1a8"][k%4]; g.fillRect(x,y,1,1); });
-  for(let y=27;y<32;y++) for(let x=0;x<32;x++){ const d=Math.hypot(x-16,y-60); if(d<33){ g.fillStyle=d>29.5?D.c[0]:((x*7+y*13)%9<3?D.c[1]:D.c[2]); g.fillRect(x,y,1,1); } }
-  // 学科の道具を大きく（12×12 を2倍）
-  const ic=ICONS[D.icon];
-  ic.forEach((r,y)=>[...r].forEach((ch,x)=>{ if(ch==="#"){ g.fillStyle="#040a1e"; g.fillRect(4+x*2+1,3+y*2+1,2,2); } }));
-  ic.forEach((r,y)=>[...r].forEach((ch,x)=>{ if(ch==="#"){ g.fillStyle=(x+y)%5===0?"#ffffff":D.c[0]; g.fillRect(4+x*2,3+y*2,2,2); } }));
+  for(let y=0;y<32;y++) for(let x=0;x<32;x++){ g.fillStyle=PAINT[i](x,y); g.fillRect(x,y,1,1); }
   ag.imageSmoothingEnabled=false; ag.drawImage(s,0,0,96,96);
   const img=new Image(); img.onload=()=>{ const k=Math.max(96/img.width,96/img.height), w=img.width*k, hh=img.height*k; ag.clearRect(0,0,96,96); ag.drawImage(img,(96-w)/2,(96-hh)/2,w,hh); }; img.src=`art${i+1}.png`;
-  D.spr=planetSprite(13,D.c[0],D.c[1],D.c[2],i%3===0);
   return c; });
 const pc=$("picCanvas").getContext("2d");
 function drawPic(ctx,tiles,flash,ai,ox,oy){
@@ -651,9 +664,9 @@ function spawnAlien(B){
 function stageClear(){
   G.cleared.push(G.stage); const bonus=Math.round((STAGE_SEC-G.stageT)*30); G.score+=bonus;
   G.packets.length=0; G.rocks.length=0; G.aliens.length=0; G.meteors.length=0; sfx.done(); buzz([60,40,60]);
-  G.state="warp"; G.warp=2.6; G.final=G.stage>=DEPTS.length-1;
-  const D=DEPTS[G.stage];
-  banner(G.final?`${D.name}の絵が完成！<small>8枚そろった！ 地球へ帰還！</small>`:`${D.name}の絵が完成！<small>時間ボーナス +${bonus}<br>次は ${DEPTS[G.stage+1].name}の星へ</small>`,2500);
+  G.state="warp"; G.warp=2.6; G.final=G.stage>=TARGETS.length-1;
+  const D=TARGETS[G.stage];
+  banner(G.final?`${D.name}の写真を受信！<small>8か所の観測写真がそろった！<br>ミッション完了！</small>`:`${D.name}の写真を受信！<small>時間ボーナス +${bonus}<br>次の観測地点：${TARGETS[G.stage+1].name}</small>`,2500);
   setTimeout(()=>sfx.warp(),700);
 }
 function revealTile(){
@@ -677,13 +690,13 @@ function update(dt,B){
     if(mode==="ar" && compass!=null && Math.abs(B.f[2])<.85){ const s=wrap180(compass-vecAz(B.f)); G.cOff = G.cOff==null ? s : G.cOff+wrap180(s-G.cOff)*.15; }
     if(G.t>=0){ G.state="play"; G.startAz=vecAz(B.f);
       if(GP && G.azOff===null){ G.azOff = G.cOff!=null ? G.cOff : wrap180(GP.max.az-vecAz(B.f)); }
-      banner(`ステージ1/8<small>${DEPTS[0].name}の星</small>`,1500); sfx.count(true); }
+      banner(`観測 1/8<small>${TARGETS[0].name}（${TARGETS[0].area}）</small>`,1600); sfx.count(true); }
     return;
   }
   if(G.state==="warp"){ G.warp-=dt;
-    if(G.warp<=0){ if(G.final){ end("完全クリア！"); return; }
+    if(G.warp<=0){ if(G.final){ end("ミッション完了！"); return; }
       G.stage++; G.stageT=0; G.tiles=new Array(GRID*GRID).fill(false); G.state="play"; G.alienT=rnd(4,7);
-      banner(`ステージ${G.stage+1}/8<small>${DEPTS[G.stage].name}の星</small>`,1500); sfx.stage(); }
+      banner(`観測 ${G.stage+1}/8<small>${TARGETS[G.stage].name}（${TARGETS[G.stage].area}）</small>`,1600); sfx.stage(); }
     return; }
   if(G.state!=="play") return;
   G.stageT+=dt;
@@ -708,7 +721,7 @@ function update(dt,B){
       if(T===HEAL){ G.life=Math.min(3,G.life+1); const p=project(k.pos,B); burst(p.x,p.y,T.rgb,24); floatText(p.x,p.y-14,"♥ ライフ回復！","#ff6f8a"); banner("ライフ回復！",900); sfx.heal(); buzz([30,30,30]); continue; }
       const pts=(100+G.combo*20)*(1+G.stage*.25)|0; G.score+=pts;
       const p=project(k.pos,B); burst(p.x,p.y,T.rgb,16); floatText(p.x,p.y-14,"+"+pts+"  "+T.bits,`rgb(${T.rgb})`);
-      if(T.k==="photo") floatText(p.x,p.y+16,"📷 地球の写真","#ffd84f");
+      if(T.k==="photo") floatText(p.x,p.y+16,"🧪 材料の劣化を計測","#ffd84f");
       if(T.k==="rad") floatText(p.x,p.y+16,"☢️ 放射線を観測","#c58cff");
       if(T.k==="radio") floatText(p.x,p.y+16,COUNTRIES[Math.random()*COUNTRIES.length|0]+"から","#7dff8a");
       sfx.catch(G.combo,T.f); buzz(15); const sc=$("score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
@@ -751,31 +764,33 @@ function update(dt,B){
 
 const LEARN=[
  "<b>4つの音で送る</b><br>てんこう2の高速通信は4FSKという方式。4つの高さの音に00・01・10・11を割り当ててデータを送ります。ゲームのキャッチ音もこの4つの音です。",
- "<b>地球の写真</b><br>てんこう2には台湾・成功大学が開発したカメラが積まれていて、宇宙から撮った画像を地上に送ります。",
+ "<b>宇宙から地球を観測</b><br>てんこう2には台湾・成功大学が開発したカメラが積まれていて、宇宙から地球を撮影して画像を地上に送ります。",
+ "<b>材料の劣化を調べる</b><br>てんこう2は、宇宙で使う新しい材料が、放射線や激しい温度変化でどう傷んでいくかも観測しています。",
+ "<b>衛星写真でわかること</b><br>宇宙から撮った写真は、台風の動きや森・氷の変化など、地上からは見えない大きな変化を調べるのに役立っています。",
  "<b>放射線データ</b><br>てんこう2の荷電粒子検出器（Liulin）は、宇宙を飛び交う放射線を測っています。宇宙で働く人や機械を守るための大切なデータです。",
  "<b>無線家の声</b><br>てんこう2のリニアトランスポンダは、世界中のアマチュア無線家の電波を中継します。宇宙を通して、地球の反対側の人とも話せます。",
  "<b>てんこう2のふるさと</b><br>てんこう2は2025年10月に種子島から打ち上げられ、2026年3月に補給機HTV-Xから宇宙へ放出されました。",
  "<b>なぜ電波が弱い？</b><br>てんこう2の送信機はとても小さな電力。しかも数百〜2000km先から届くので、アンテナをきっちり向けないと受信できません。",
- "<b>パケットって？</b><br>大きなデータは小さなかたまり（パケット）に分けて送られます。受け取れなかった分は欠けてしまうので、絵が完成しないこともあります。",
+ "<b>パケットって？</b><br>大きなデータは小さなかたまり（パケット）に分けて送られます。受け取れなかった分は欠けてしまうので、写真が完成しないこともあります。",
  "<b>スペースデブリ</b><br>地球のまわりには、使い終わった衛星やロケットの破片が何万個も回っています。とても速いので、小さな破片でも衛星には大きな脅威です。",
  "<b>上空にいるのは数分だけ</b><br>低い軌道の衛星は約90分で地球を1周。地上から見えるのは1回10分ほどなので、その間に急いでデータを受け取ります。",
- "<b>てんこう2と日芸</b><br>てんこう2は日本大学理工学部の衛星。日芸と作ったイラストや音楽を、宇宙から地上に届けるミッションも持っています。"
+ "<b>てんこう2はどこの衛星？</b><br>てんこう2は日本大学理工学部の奥山研究室が開発した、30×20×10cmの小さな衛星です。"
 ];
 function end(title){
   bgmStop(1.2); $("bgmBtn").style.display="none";
   G.state="end"; const n=G.cleared.length;
   let best=0; try{ best=+localStorage.getItem("tk2catch")||0; }catch(e){}
   const nb=G.score>best; if(nb){ try{ localStorage.setItem("tk2catch",G.score); }catch(e){} best=G.score; }
-  if(title==="完全クリア！") sfx.clear(); else if(title==="タイムアップ") sfx.timeup(); else setTimeout(()=>sfx.over(),title.includes("宇宙人")?900:450);
+  if(title==="ミッション完了！") sfx.clear(); else if(title==="タイムアップ") sfx.timeup(); else setTimeout(()=>sfx.over(),title.includes("宇宙人")?900:450);
   setTimeout(()=>{
     $("rTitle").textContent=title;
     const g=$("rImg").getContext("2d"); g.imageSmoothingEnabled=false; g.fillStyle="#040a1e"; g.fillRect(0,0,384,192);
-    DEPTS.forEach((D,i)=>{ const ox=(i%4)*96, oy=Math.floor(i/4)*96;
+    TARGETS.forEach((D,i)=>{ const ox=(i%4)*96, oy=Math.floor(i/4)*96;
       if(G.cleared.includes(i)) g.drawImage(arts[i],ox,oy);
       else if(i===G.stage) drawPic(g,G.tiles,null,i,ox,oy);
       else { g.fillStyle="#0b1840"; g.fillRect(ox,oy,96,96); g.fillStyle="#3a5a9a"; g.font='40px "DotGothic16"'; g.textAlign="center"; g.fillText("?",ox+48,oy+62); }
       g.strokeStyle="#040a1e"; g.lineWidth=4; g.strokeRect(ox+2,oy+2,92,92); });
-    $("rPieces").innerHTML= title==="完全クリア！" ? "🌏 日芸8学科の星をすべてめぐって地球に帰還！" : `クリアした学科の星 ${n} / 8`+(n<8?`<br><span style="color:var(--dim);font-size:12px">次は ${DEPTS[Math.min(7,G.stage)].name}の星から</span>`:"");
+    $("rPieces").innerHTML= title==="ミッション完了！" ? "🌏 地球の8か所の観測写真をすべて受信！" : `受信した観測写真 ${n} / 8`+(n<8?`<br><span style="color:var(--dim);font-size:12px">次は ${TARGETS[Math.min(7,G.stage)].name}の観測から</span>`:"");
     $("report").innerHTML=TYPES.map(T=>{ const s=G.sent[T.k]||0, gg=G.got[T.k]||0, pc=s?Math.round(gg/s*100):0;
       return `<div class="row"><span class="nm">${T.icon} ${T.name}</span><span class="bar"><i style="width:${pc}%;background:rgb(${T.rgb})"></i></span><span class="ct">${pc}%</span></div>`; }).join("");
     $("rScore").textContent=G.score.toLocaleString();
@@ -866,7 +881,7 @@ function updateHUD(){
   $("score").textContent=G.score.toLocaleString();
   const left=Math.max(0,Math.min(1,1-G.stageT/STAGE_SEC)); $("timefill").style.transform=`scaleX(${G.state==="play"?left:1})`;
   $("timefill").style.background=left<.25?"var(--warn)":"";
-  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=`ST${Math.min(G.stage,7)+1}/8 ${DEPTS[Math.min(G.stage,7)].name} ${n}/${GRID*GRID}`;
+  const n=G.tiles.filter(Boolean).length; $("picLabel").textContent=`ST${Math.min(G.stage,7)+1}/8 ${TARGETS[Math.min(G.stage,7)].name} ${n}/${GRID*GRID}`;
   $("bits").innerHTML=G.bits.map(T=>`<span style="color:rgb(${T.rgb})">${T.bits}</span>`).join(" ")||"&nbsp;";
   const l=G.state!=="count"?satLook():null;
   $("sub").textContent = l ? `てんこう2：高度 ${Math.round(l.alt)}km・相模原から ${Math.round(l.rng).toLocaleString()}km・${dirName(l.az)}の空 ${Math.max(0,l.el).toFixed(0)}°` : (GP?"本物の軌道データで計算中":"");
