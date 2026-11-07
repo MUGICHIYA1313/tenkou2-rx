@@ -423,27 +423,69 @@ function drawPic(ctx,tiles,flash,ai,ox,oy){
     if(flash && flash.i===i && flash.t>0){ ctx.fillStyle=`rgba(79,232,255,${flash.t*1.6})`; ctx.fillRect(ox+x,oy+y,s,s); } }
 }
 
-// ================== 音 ==================
-let AC=null;
-function audio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.resume) AC.resume(); }
-function tone(f,dur,type,vol,f2,delay){ if(!AC) return; const t=AC.currentTime+(delay||0), o=AC.createOscillator(), g=AC.createGain();
+// ================== 音（すべてその場で合成：音声ファイル不要） ==================
+let AC=null, OUT=null;
+function audio(){
+  // iPhoneのマナーモードでも鳴るように（iOS 16.4以降の Safari）
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)();
+      const comp=AC.createDynamicsCompressor(); comp.threshold.value=-18; comp.knee.value=12; comp.ratio.value=4; comp.attack.value=.003; comp.release.value=.2;
+      OUT=AC.createGain(); OUT.gain.value=.95; OUT.connect(comp).connect(AC.destination);
+      const sb=AC.createBufferSource(); sb.buffer=AC.createBuffer(1,1,22050); sb.connect(AC.destination); sb.start(0);   // iOSの無音ロック解除
+    }catch(e){} }
+  if(AC&&AC.resume) AC.resume();
+}
+function tone(f,dur,type,vol,f2,delay,vib){ if(!AC) return; const t=AC.currentTime+(delay||0), o=AC.createOscillator(), g=AC.createGain();
   o.type=type||"sine"; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur);
-  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||.2,t+.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  o.connect(g).connect(AC.destination); o.start(t); o.stop(t+dur+.02); }
-function noise(dur,vol){ if(!AC) return; const b=AC.createBuffer(1,AC.sampleRate*dur,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
-  const s=AC.createBufferSource(), g=AC.createGain(); s.buffer=b; g.gain.value=vol; s.connect(g).connect(AC.destination); s.start(); }
+  if(vib){ const l=AC.createOscillator(), lg=AC.createGain(); l.frequency.value=vib[0]; lg.gain.value=vib[1]; l.connect(lg).connect(o.frequency); l.start(t); l.stop(t+dur+.05); }
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||.2,t+.008); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(OUT); o.start(t); o.stop(t+dur+.05); }
+// フィルター付きノイズ（爆発・衝突・風切り音）
+function noise(dur,vol,ftype,f0,f1,q,delay){ if(!AC) return; const t=AC.currentTime+(delay||0);
+  const b=AC.createBuffer(1,Math.max(1,AC.sampleRate*dur|0),AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const s=AC.createBufferSource(), fl=AC.createBiquadFilter(), g=AC.createGain(); s.buffer=b;
+  fl.type=ftype||"lowpass"; fl.Q.value=q||.7; fl.frequency.setValueAtTime(f0||4000,t); if(f1) fl.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.006); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(fl).connect(g).connect(OUT); s.start(t); s.stop(t+dur+.05); }
+const arp=(fs,step,dur,type,vol,delay)=>fs.forEach((f,i)=>tone(f,dur,type,vol,null,(delay||0)+i*step));
 const sfx={
-  catch:(c,f)=>{ tone(f,.15,"triangle",.3); if(c>=5) tone(f*2,.09,"sine",.08+Math.min(c,20)*.004,null,.06); },
-  spawn:()=>tone(1500,.05,"sine",.03),
-  miss:()=>tone(240,.14,"sine",.07,180),
-  hit:()=>{ noise(.35,.35); tone(160,.4,"sawtooth",.18,50); },
-  count:hi=>tone(hi?1320:880,.12,"square",.08),
-  done:()=>{ [523,659,784,1047,1319].forEach((f,i)=>tone(f,.25,"triangle",.22,null,i*.09)); },
-  heal:()=>{ [784,988,1319,1568].forEach((f,i)=>tone(f,.14,"square",.1,null,i*.06)); },
-  alien:()=>{ noise(.8,.4); tone(90,.9,"sawtooth",.25,40); tone(140,.6,"square",.1,60,.1); },
-  warp:()=>{ tone(220,1.2,"sawtooth",.08,1760); },
-  warn:()=>tone(660,.08,"square",.06),
-  over:()=>{ [392,330,262].forEach((f,i)=>tone(f,.35,"triangle",.18,null,i*.16)); }
+  // --- 画面・進行 ---
+  ui:()=>{ tone(1320,.04,"square",.07); tone(1760,.05,"square",.05,null,.035); },
+  count:hi=>{ if(hi){ arp([784,1047,1568],.06,.14,"square",.11); } else tone(880,.13,"square",.1); },
+  stage:()=>{ arp([523,784,1047],.07,.16,"triangle",.16); },
+  tick:hot=>tone(hot?1568:1175,.05,"square",hot?.09:.06),
+  rush:()=>{ tone(988,.12,"square",.1); tone(988,.12,"square",.1,null,.18); },
+  // --- データ受信 ---
+  spawn:()=>{ tone(1800,.04,"sine",.035,2600); },
+  catch:(c,f)=>{ // 4FSKの4つの音＋受信チャープ
+    tone(f,.13,"triangle",.3); tone(f*1.5,.08,"square",.06,null,.035);
+    for(let i=0;i<4;i++) tone(f*2*(i%2?1.25:1),.025,"square",.035,null,.06+i*.025);
+    if(c>=5) tone(f*2,.1,"sine",.06+Math.min(c,20)*.004,null,.12); },
+  piece:()=>{ arp([1319,1760,2093],.04,.1,"sine",.09,.08); noise(.18,.05,"highpass",6000,null,1,.08); },
+  combo:c=>{ const base=659*Math.pow(2,Math.min(c/5-1,4)/12); arp([base,base*1.25,base*1.5,base*2],.05,.12,"square",.08); },
+  miss:()=>tone(330,.16,"sine",.07,165),
+  // --- 絵の完成・ワープ ---
+  done:()=>{ arp([523,659,784,1047],.08,.18,"square",.12); arp([1047,1319,1568,2093],.08,.3,"triangle",.14,.34);
+    tone(523,.7,"triangle",.1,null,.34); noise(.6,.06,"highpass",5000,null,1,.34); },
+  warp:()=>{ tone(180,1.4,"sawtooth",.09,1600); tone(240,1.4,"square",.04,2400,.05); noise(1.4,.14,"bandpass",300,5000,1.5); },
+  clear:()=>{ arp([523,659,784,1047,784,1047,1319,1568],.11,.22,"square",.12); arp([262,330,392,523],.22,.5,"triangle",.14);
+    tone(1047,1.2,"triangle",.12,null,.95); tone(1319,1.2,"triangle",.1,null,.95); tone(1568,1.2,"triangle",.1,null,.95); noise(1.2,.07,"highpass",6000,null,1,.95); },
+  // --- 回復 ---
+  healAppear:()=>{ arp([2093,2637,3136],.05,.08,"sine",.05); },
+  heal:()=>{ arp([784,988,1319,1568,2093],.055,.16,"square",.1); tone(2093,.4,"sine",.06,null,.28); },
+  // --- 接触・爆発 ---
+  clank:()=>{ noise(.12,.35,"bandpass",2600,900,6); tone(420,.18,"square",.16,180); tone(1340,.08,"square",.07,600); },   // デブリ（−1）
+  meteorWarn:()=>{ tone(1760,.09,"square",.07); tone(1760,.09,"square",.07,null,.15); },
+  whoosh:()=>{ noise(.7,.16,"bandpass",3500,400,2.5); tone(1400,.6,"sine",.04,300); },
+  boom:()=>{ noise(1.1,.6,"lowpass",3000,60,.8); tone(110,.7,"sine",.45,35); tone(70,.9,"triangle",.3,30,.04); noise(.25,.25,"highpass",2500,null,1); },   // 隕石（−2）
+  ufo:()=>{ tone(420,1.1,"sine",.06,null,0,[9,60]); tone(840,1.1,"triangle",.025,null,0,[9,120]); },
+  warn:()=>tone(660,.08,"square",.07),
+  zap:()=>{ tone(1800,.5,"sawtooth",.12,90,0,[30,200]); noise(1.2,.55,"lowpass",2500,50,.8,.18); tone(80,.9,"sine",.4,30,.18); },   // 宇宙人（−3）
+  // --- 終了 ---
+  over:()=>{ arp([392,330,262,196],.2,.4,"triangle",.16); tone(98,.9,"sawtooth",.06,null,.6); },
+  timeup:()=>{ tone(880,.25,"square",.1); tone(659,.25,"square",.1,null,.26); tone(523,.6,"square",.1,null,.52); },
+  // 旧名との互換
+  hit:()=>sfx.clank(), alien:()=>sfx.zap()
 };
 const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
 
@@ -468,7 +510,7 @@ function heat(){ return Math.min(1, G.stage*0.09 + G.stageT/STAGE_SEC*0.3 + G.co
 function spawnPacket(){
   const s=satDir(); const to=offsetDir(s,rnd(10,36),Math.random()*Math.PI*2);
   let r=Math.random(), ty=TYPES[0]; for(const T of TYPES){ if((r-=T.w)<=0){ ty=T; break; } }
-  if(G.life<3 && Math.random()<.035) ty=HEAL;           // ほんとにたまーに回復
+  if(G.life<3 && Math.random()<.035){ ty=HEAL; setTimeout(()=>sfx.healAppear(),250); }           // ほんとにたまーに回復
   G.sent[ty.k]++;
   G.packets.push({ty,from:s,to,age:0,fly:.55,life:ty===HEAL?2.2:Math.max(1.9,3.6-heat()*1.5)}); sfx.spawn();
 }
@@ -483,10 +525,10 @@ function spawnMeteor(B){
   // 決まった向き（右上 → 左下）に落ちてきて、照準の近くを横切る
   const target=offsetDir(B.f,rnd(0,9),Math.random()*Math.PI*2), az=vecAz(target), el=vecEl(target);
   const start=enu(az+26/Math.max(.35,Math.cos(el*DEG)), Math.min(82,el+22));
-  G.meteors.push({p:start,v:norm([target[0]-start[0],target[1]-start[1],target[2]-start[2]]),speed:rnd(14,18)+G.stage*.8,age:0,warn:.9,life:4});
+  G.meteors.push({p:start,v:norm([target[0]-start[0],target[1]-start[1],target[2]-start[2]]),speed:rnd(14,18)+G.stage*.8,age:0,warn:.9,life:4}); sfx.meteorWarn();
 }
 function hurt(n,pos,B,rgb,name,title){
-  G.life-=n; G.combo=0; G.shake=.3+n*.17; G.flash=.35+n*.2; G.inv=1.3; sfx.hit(); if(n>=2) sfx.alien(); buzz(n>=3?[300,80,300]:120*n);
+  G.life-=n; G.combo=0; G.shake=.3+n*.17; G.flash=.35+n*.2; G.inv=1.3; (n>=3?sfx.zap:n>=2?sfx.boom:sfx.clank)(); buzz(n>=3?[300,80,300]:120*n);
   const p=project(pos,B); burst(p.x,p.y,rgb,16+n*10);
   if(G.life<=0){ end(title); return true; }
   banner(`${name}<small>ライフ −${n}</small>`,1000); return false;
@@ -531,7 +573,7 @@ function update(dt,B){
   if(G.state==="warp"){ G.warp-=dt;
     if(G.warp<=0){ if(G.final){ end("完全クリア！"); return; }
       G.stage++; G.stageT=0; G.tiles=new Array(GRID*GRID).fill(false); G.state="play"; G.alienT=rnd(4,7);
-      banner(`ステージ${G.stage+1}/8<small>${DEPTS[G.stage].name}の星</small>`,1500); sfx.count(true); }
+      banner(`ステージ${G.stage+1}/8<small>${DEPTS[G.stage].name}の星</small>`,1500); sfx.stage(); }
     return; }
   if(G.state!=="play") return;
   G.stageT+=dt;
@@ -541,7 +583,8 @@ function update(dt,B){
   if(G.spawnT<=0){ spawnPacket(); if(Math.random()<heat()*.45) spawnPacket(); G.spawnT=Math.max(.45,1.15-heat()*.6)*rnd(.8,1.2); }
   G.rockT-=dt;
   if(G.rockT<=0){ spawnRock(B); G.rockT=Math.max(.9,2.6-heat()*1.6)*rnd(.8,1.2); }
-  if(G.rushStage!==G.stage && G.stageT>STAGE_SEC-10){ G.rushStage=G.stage; banner("あと10秒！",1000); }
+  if(G.rushStage!==G.stage && G.stageT>STAGE_SEC-10){ G.rushStage=G.stage; banner("あと10秒！",1000); sfx.rush(); }
+  if(G.stageT>STAGE_SEC-10){ const sec=Math.ceil(STAGE_SEC-G.stageT); if(sec!==G.lastTick){ G.lastTick=sec; if(sec<10) sfx.tick(sec<=3); } }
   if(G.stageT>6){ G.metT-=dt; if(G.metT<=0){ spawnMeteor(B); G.metT=Math.max(4,9-G.stage*.6)*rnd(.8,1.2); } }
   if(G.stage>=1){ G.alienT-=dt; if(G.alienT<=0 && !G.aliens.length){ spawnAlien(B); G.alienT=Math.max(6,13-G.stage)*rnd(.8,1.2); } }
 
@@ -559,7 +602,8 @@ function update(dt,B){
       if(T.k==="rad") floatText(p.x,p.y+16,"☢️ 放射線を観測","#c58cff");
       if(T.k==="radio") floatText(p.x,p.y+16,COUNTRIES[Math.random()*COUNTRIES.length|0]+"から","#7dff8a");
       sfx.catch(G.combo,T.f); buzz(15); const sc=$("score"); sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump");
-      if(T.k==="art" && revealTile()>=0 && G.tiles.every(Boolean)){ stageClear(); return; }
+      if(G.combo>=5 && G.combo%5===0) sfx.combo(G.combo);
+      if(T.k==="art" && revealTile()>=0){ if(G.tiles.every(Boolean)){ stageClear(); return; } sfx.piece(); }
       continue;
     }
     if(k.age>k.fly+k.life){ G.packets.splice(i,1); if(k.ty===HEAL) continue; if(G.combo>=3) floatText(W/2,H/2+64,"コンボ切れ","#8a97ab"); G.combo=0; sfx.miss(); }
@@ -575,7 +619,7 @@ function update(dt,B){
   }
   // 隕石（−2）
   for(let i=G.meteors.length-1;i>=0;i--){
-    const m=G.meteors[i]; m.age+=dt; if(m.age<m.warn) continue;
+    const m=G.meteors[i]; m.age+=dt; if(m.age<m.warn) continue; if(!m.snd){ m.snd=1; sfx.whoosh(); }
     m.v=norm(add(m.v,m.p,-dot(m.v,m.p))); m.p=norm(add(m.p,m.v,m.speed*DEG*dt));
     if(G.inv<=0 && ang(m.p,B.f)<ROCK_R*1.1){ G.meteors.splice(i,1); if(hurt(2,m.p,B,"255,140,60","隕石直撃！","隕石で大破…")) return; continue; }
     if(m.age>m.warn+m.life) G.meteors.splice(i,1);
@@ -584,6 +628,7 @@ function update(dt,B){
   for(let i=G.aliens.length-1;i>=0;i--){
     const a=G.aliens[i]; a.age+=dt;
     if(a.age<a.warn){ if(Math.floor(a.age*6)!==Math.floor((a.age-dt)*6)) sfx.warn(); continue; }
+    if(!a.snd){ a.snd=1; sfx.ufo(); } if(Math.floor(a.age/1.1)!==Math.floor((a.age-dt)/1.1)) sfx.ufo();
     a.turn-=dt;
     if(a.turn<=0){ a.turn=rnd(.35,.9); const up=norm(cross(a.v,a.p)), t=rnd(0,Math.PI*2); a.v=norm(add(a.v.map(x=>x*Math.cos(t)),up,Math.sin(t)));
       if(ang(a.p,B.f)>30){ const to=norm(add(B.f,a.p,-dot(B.f,a.p))); a.v=norm(add(a.v,to,1.6)); } }
@@ -610,7 +655,7 @@ function end(title){
   G.state="end"; const n=G.cleared.length;
   let best=0; try{ best=+localStorage.getItem("tk2catch")||0; }catch(e){}
   const nb=G.score>best; if(nb){ try{ localStorage.setItem("tk2catch",G.score); }catch(e){} best=G.score; }
-  if(title==="完全クリア！") sfx.done(); else if(!title.includes("宇宙人")) sfx.over();
+  if(title==="完全クリア！") sfx.clear(); else if(title==="タイムアップ") sfx.timeup(); else setTimeout(()=>sfx.over(),title.includes("宇宙人")?900:450);
   setTimeout(()=>{
     $("rTitle").textContent=title;
     const g=$("rImg").getContext("2d"); g.imageSmoothingEnabled=false; g.fillStyle="#040a1e"; g.fillRect(0,0,384,192);
@@ -748,6 +793,7 @@ async function startAR(){
     begin();
   }catch(err){ toast("カメラ／センサーを使えませんでした<br>（"+err.message+"）<br>SafariでHTTPSのページを開いてください",4500); }
 }
+document.addEventListener("pointerdown",e=>{ if(e.target.closest&&e.target.closest("button")){ audio(); sfx.ui(); } },true);
 $("bStartAR").onclick=startAR;
 // タイトルを「太らせたドット文字」の絵として描く（どの端末でも同じ太さ）
 function drawTitle(){
