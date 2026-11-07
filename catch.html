@@ -34,6 +34,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--d
 #picCanvas{width:120px;height:120px;display:block;image-rendering:pixelated}
 #picLabel{font-size:12px;margin-top:5px;color:var(--pkt)}
 #bits{font-family:var(--num);font-size:7px;margin-top:4px;white-space:nowrap;overflow:hidden;width:120px;line-height:1.4}
+#bgmBtn{position:fixed;right:16px;top:calc(env(safe-area-inset-top) + 120px);width:44px;height:44px;padding:0;font-size:20px;display:none;z-index:5}
+body.ar #bgmBtn{top:calc(env(safe-area-inset-top) + 172px)}
 #camBtn{position:fixed;right:16px;top:calc(env(safe-area-inset-top) + 120px);width:44px;height:44px;padding:0;font-size:20px;display:none;z-index:5}
 #banner{position:fixed;left:0;right:0;top:34%;text-align:center;font-family:var(--dot);font-size:min(38px,8.4vw);padding:0 10px;color:#fff;text-shadow:2px 0 0 #fff,5px 5px 0 var(--ink),-3px -3px 0 var(--ink),4px -3px 0 var(--ink),-3px 4px 0 var(--ink),0 0 18px rgba(79,150,255,.6);pointer-events:none;opacity:0}
 #banner.on{opacity:1;animation:pop .2s steps(2)}
@@ -78,6 +80,7 @@ button:active{transform:translate(2px,2px)}
 <canvas id="sky"></canvas>
 <canvas id="ui"></canvas>
 <button id="camBtn" title="カメラ映像">📷</button>
+<button id="bgmBtn" title="BGMのオン／オフ">🎵</button>
 
 <div id="top" class="panel">
   <div class="r"><span id="hearts">♥♥♥</span><span id="score">0</span></div>
@@ -489,12 +492,119 @@ const sfx={
 };
 const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
 
+// ===== てんこう2 パケットキャッチ BGM（オリジナル・8ビット風。すべてその場で合成） =====
+// 曲データ：bpm、コード進行（1小節ずつ）、メロディ（音名:長さ[8分音符単位]、R=休符）
+const BGM_SONGS={
+  A:{ name:"オービット・ラン", bpm:150, swing:0,
+      chords:["Am","F","G","Em","Am","F","G","E"],
+      mel:["E5:2 A5:2 G5:1 E5:1 D5:2","C5:2 F5:2 E5:1 C5:1 A4:2","B4:2 D5:2 G5:2 F5:1 D5:1","E5:6 R:2",
+           "A5:1 G5:1 E5:2 A5:1 G5:1 E5:2","F5:1 E5:1 C5:2 F5:1 E5:1 C5:2","D5:2 G5:2 B5:2 A5:1 G5:1","G#5:4 B5:2 E5:2"],
+      bass:"pump", arp:"up16", drums:"drive", lead:.125, leadVol:.13, arpVol:.045, bassVol:.2 },
+  B:{ name:"スターダスト・シグナル", bpm:116, swing:0,
+      chords:["Cmaj7","Am7","Fmaj7","G","Cmaj7","Em7","Fmaj7","D"],
+      mel:["E5:3 G5:1 B5:4","A5:2 G5:2 E5:4","F5:2 A5:2 C6:2 B5:1 A5:1","G5:6 R:2",
+           "E5:2 G5:2 B5:2 C6:2","B5:3 G5:1 E5:4","A5:2 C6:2 E6:2 D6:1 C6:1","F#5:4 D5:4"],
+      bass:"long", arp:"sparkle", drums:"soft", lead:.25, leadVol:.1, arpVol:.04, bassVol:.22, echo:true },
+  C:{ name:"ディープスペース・アラート", bpm:138, swing:0,
+      chords:["Dm","Dm","Bb","C","Dm","Dm","Bb","A"],
+      mel:["D5:1 R:1 D5:1 F5:1 A5:2 G5:1 F5:1","E5:2 D5:2 R:4","D5:1 R:1 D5:1 F5:1 A#5:2 A5:1 G5:1","A5:2 G5:2 E5:4",
+           "A5:1 R:1 A5:1 C6:1 D6:2 C6:1 A5:1","G5:1 F5:1 E5:1 F5:1 D5:4","F5:2 A#5:2 A5:2 G5:2","C#6:4 E5:2 A5:2"],
+      bass:"pulse16", arp:"alarm", drums:"four", lead:.5, leadVol:.1, arpVol:.035, bassVol:.2 }
+};
+const NOTE_I={C:0,"C#":1,Db:1,D:2,"D#":3,Eb:3,E:4,F:5,"F#":6,Gb:6,G:7,"G#":8,Ab:8,A:9,"A#":10,Bb:10,B:11};
+const midiOf=s=>{ const m=s.match(/^([A-G][#b]?)(\d)$/); return 12*(+m[2]+1)+NOTE_I[m[1]]; };
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function chordTones(name){ // ルートの高さは3オクターブ目（ベース用）
+  const m=name.match(/^([A-G][#b]?)(.*)$/), r=NOTE_I[m[1]]+48, q=m[2];
+  const iv=q==="m"?[0,3,7]:q==="m7"?[0,3,7,10]:q==="maj7"?[0,4,7,11]:q==="7"?[0,4,7,10]:[0,4,7];
+  return iv.map(i=>r+i);
+}
+// パルス波（ファミコン風の細い矩形波）
+const PW={};
+function pulseWave(ctx,duty){ const k=duty+"_"+ctx.sampleRate; if(PW[k]&&PW[k].ctx===ctx) return PW[k].w;
+  const n=64, re=new Float32Array(n), im=new Float32Array(n);
+  for(let i=1;i<n;i++){ im[i]=(2/(i*Math.PI))*Math.sin(i*Math.PI*duty); re[i]=0; }
+  const w=ctx.createPeriodicWave(re,im,{disableNormalization:false}); PW[k]={ctx,w}; return w; }
+function bgmVoice(ctx,out,t,dur,f,wave,vol,duty){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  if(wave==="pulse") o.setPeriodicWave(pulseWave(ctx,duty||.25)); else o.type=wave;
+  o.frequency.setValueAtTime(f,t);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.005);
+  g.gain.setValueAtTime(vol,t+Math.max(.01,dur-.03)); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(out); o.start(t); o.stop(t+dur+.02);
+}
+let NOISE_BUF=null;
+function bgmNoise(ctx,out,t,dur,vol,ftype,f0,f1){
+  if(!NOISE_BUF||NOISE_BUF.sampleRate!==ctx.sampleRate){ NOISE_BUF=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate); const d=NOISE_BUF.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }
+  const s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), g=ctx.createGain(); s.buffer=NOISE_BUF;
+  fl.type=ftype; fl.frequency.setValueAtTime(f0,t); if(f1) fl.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(fl).connect(g).connect(out); s.start(t); s.stop(t+dur+.02);
+}
+function kick(ctx,out,t,v){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="sine"; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+.12);
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+.16); o.connect(g).connect(out); o.start(t); o.stop(t+.2); }
+// 1小節を予約する（bar = 0〜7）
+function bgmBar(ctx,out,song,bar,t0){
+  const S=BGM_SONGS[song], st=60/S.bpm/4;   // 16分音符の長さ
+  const ch=chordTones(S.chords[bar]);
+  // メロディ
+  let pos=0; for(const tok of S.mel[bar].split(" ")){ const [n,l]=tok.split(":"); const len=+l*2;
+    if(n!=="R"){ const f=hz(midiOf(n)); bgmVoice(ctx,out,t0+pos*st,len*st*.92,f,"pulse",S.leadVol,S.lead);
+      if(S.echo) bgmVoice(ctx,out,t0+(pos+3)*st,len*st*.8,f,"pulse",S.leadVol*.35,S.lead); }
+    pos+=len; }
+  // ベース
+  for(let i=0;i<16;i++){ const t=t0+i*st, root=hz(ch[0]-12);
+    if(S.bass==="pump"&&i%2===0) bgmVoice(ctx,out,t,st*1.7,i%4===0?root:root*2,"triangle",S.bassVol);
+    if(S.bass==="long"&&(i===0||i===8)) bgmVoice(ctx,out,t,st*7.5,i===0?root:hz(ch[2]-12),"triangle",S.bassVol);
+    if(S.bass==="pulse16") bgmVoice(ctx,out,t,st*.85,i%8===6?root*2:root,"triangle",S.bassVol*(i%4===0?1:.75)); }
+  // アルペジオ
+  for(let i=0;i<16;i++){ const t=t0+i*st;
+    if(S.arp==="up16"){ const n=ch[i%ch.length]+24; bgmVoice(ctx,out,t,st*.8,hz(n),"pulse",S.arpVol,.125); }
+    if(S.arp==="sparkle"){ const seq=[0,1,2,3,2,1]; const n=ch[seq[i%6]%ch.length]+36; bgmVoice(ctx,out,t,st*.7,hz(n),"pulse",S.arpVol,.125); }
+    if(S.arp==="alarm"&&(i%4===2)){ bgmVoice(ctx,out,t,st*.5,hz(ch[0]+36),"square",S.arpVol); bgmVoice(ctx,out,t+st*.5,st*.5,hz(ch[0]+43),"square",S.arpVol*.8); } }
+  // ドラム
+  for(let i=0;i<16;i++){ const t=t0+i*st;
+    if(S.drums==="drive"){ if(i===0||i===8||i===10) kick(ctx,out,t,.55); if(i===4||i===12) bgmNoise(ctx,out,t,.12,.22,"bandpass",1800,900); if(i%2===0) bgmNoise(ctx,out,t,.03,.07,"highpass",7000); }
+    if(S.drums==="soft"){ if(i===0) kick(ctx,out,t,.4); if(i===8) bgmNoise(ctx,out,t,.15,.12,"bandpass",1500,700); if(i%4===2) bgmNoise(ctx,out,t,.025,.05,"highpass",8000); }
+    if(S.drums==="four"){ if(i%4===0) kick(ctx,out,t,.55); if(i===4||i===12) bgmNoise(ctx,out,t,.1,.2,"bandpass",2000,1000); bgmNoise(ctx,out,t,.02,i%2?.04:.065,"highpass",7500); }
+  }
+  return st*16;
+}
+
+// ---- BGMの再生（先読みしながら1小節ずつ予約してループ） ----
+const BGM_SONG="C";          // 使う曲（A／B／C）
+const BGM_VOL=.5;
+const BGM={on:false,next:0,bar:0,timer:null,gain:null,muted:false};
+function bgmStart(){
+  audio(); if(!AC) return;
+  if(!BGM.gain){ BGM.gain=AC.createGain(); BGM.gain.connect(OUT); }
+  const t=AC.currentTime; BGM.gain.gain.cancelScheduledValues(t); BGM.gain.gain.setValueAtTime(BGM.muted?0:BGM_VOL,t);
+  if(BGM.on) return; BGM.on=true; BGM.bar=0; BGM.next=t+.15; clearInterval(BGM.timer); BGM.timer=setInterval(bgmPump,100); bgmPump();
+}
+function bgmPump(){
+  if(!BGM.on||!AC||!BGM.gain) return;
+  if(BGM.next<AC.currentTime-.05) BGM.next=AC.currentTime+.05;   // 画面を離れて戻った時に一気に鳴らない
+  while(BGM.next<AC.currentTime+.6){ BGM.next+=bgmBar(AC,BGM.gain,BGM_SONG,BGM.bar,BGM.next); BGM.bar=(BGM.bar+1)%8; }
+}
+function bgmStop(fade){
+  if(!BGM.on||!AC||!BGM.gain) return; fade=fade||.8; BGM.on=false; clearInterval(BGM.timer);
+  const g=BGM.gain, t=AC.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0.0001,t+fade);
+  BGM.gain=null; setTimeout(()=>{ try{ g.disconnect(); }catch(e){} },fade*1000+1500);
+}
+function bgmToggle(){
+  BGM.muted=!BGM.muted; $("bgmBtn").textContent=BGM.muted?"🔇":"🎵";
+  if(BGM.gain&&AC){ const t=AC.currentTime; BGM.gain.gain.cancelScheduledValues(t); BGM.gain.gain.setValueAtTime(BGM.gain.gain.value,t); BGM.gain.gain.linearRampToValueAtTime(BGM.muted?0.0001:BGM_VOL,t+.25); }
+  try{ localStorage.setItem("tk2bgmMute",BGM.muted?"1":"0"); }catch(e){}
+}
+try{ if(localStorage.getItem("tk2bgmMute")==="1"){ BGM.muted=true; } }catch(e){}
+
 // ================== ゲーム ==================
 let G=null;
 function newGame(B){
   G={state:"count", t:-5.2, azOff:null, cOff:null, got:{art:0,photo:0,rad:0,radio:0,heal:0}, sent:{art:0,photo:0,rad:0,radio:0,heal:0}, stage:0, stageT:0, cleared:[], aliens:[], alienT:6, meteors:[], metT:9, warp:0, final:false, rushStage:-1, bits:[], life:3, score:0, combo:0, maxCombo:0, caught:0, tiles:new Array(GRID*GRID).fill(false), completeT:null,
      packets:[], rocks:[], parts:[], floats:[], spawnT:0.6, rockT:2.5, startAz:vecAz(B.f), shake:0, flash:0, inv:0, lastCount:4, pf:null, rushShown:false};
   $("top").style.display="block"; $("pic").style.display="block"; $("result").style.display="none";
+  $("bgmBtn").style.display="block"; $("bgmBtn").textContent=BGM.muted?"🔇":"🎵"; bgmStart();
   prepPass();
   if(GP){ if(mode==="pc"){ G.azOff=0; view={az:GP.rise.az+20, el:12}; }
     banner(`本物のてんこう2<small>${fmtJST(GP.aos)} の相模原上空のパスを再現<br>${dirName(GP.rise.az)}の空から現れるぞ！</small>`,2300); }
@@ -652,6 +762,7 @@ const LEARN=[
  "<b>てんこう2と日芸</b><br>てんこう2は日本大学理工学部の衛星。日芸と作ったイラストや音楽を、宇宙から地上に届けるミッションも持っています。"
 ];
 function end(title){
+  bgmStop(1.2); $("bgmBtn").style.display="none";
   G.state="end"; const n=G.cleared.length;
   let best=0; try{ best=+localStorage.getItem("tk2catch")||0; }catch(e){}
   const nb=G.score>best; if(nb){ try{ localStorage.setItem("tk2catch",G.score); }catch(e){} best=G.score; }
@@ -787,7 +898,7 @@ async function startAR(){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=="granted") throw new Error("傾きセンサーが許可されませんでした");
     }
     addEventListener("deviceorientation",e=>{ if(e.alpha!=null) ori={alpha:e.alpha,beta:e.beta,gamma:e.gamma}; if(e.webkitCompassHeading!=null) compass=e.webkitCompassHeading; });
-    mode="ar"; camOn=false; $("camBtn").style.display="block";
+    mode="ar"; camOn=false; $("camBtn").style.display="block"; document.body.classList.add("ar");
     const wait=Date.now(); while(!ori && Date.now()-wait<1500) await new Promise(r=>setTimeout(r,50));
     if(!ori){ toast("傾きセンサーが反応しません。<br>「PCであそぶ」を使ってください",4000); }
     begin();
@@ -795,6 +906,7 @@ async function startAR(){
 }
 document.addEventListener("pointerdown",e=>{ if(e.target.closest&&e.target.closest("button")){ audio(); sfx.ui(); } },true);
 $("bStartAR").onclick=startAR;
+$("bgmBtn").onclick=bgmToggle;
 // タイトルを「太らせたドット文字」の絵として描く（どの端末でも同じ太さ）
 function drawTitle(){
   const lines=["てんこう2","パケットキャッチ"], fs=16, lh=20, pad=4, cols=["#ffffff","#ffffff"];
